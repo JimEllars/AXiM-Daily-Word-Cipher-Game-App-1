@@ -15,7 +15,23 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+
     try {
+      if (path === '/api/leaderboard' && request.method === 'GET') {
+        const type = url.searchParams.get('type') || 'allTime';
+        // D1 Query Stub based on type: SELECT username, total_all_time_score as score FROM Users ORDER BY score DESC LIMIT 10
+        const dummyData = {
+          data: [
+            { rank: 1, user: "0x1234...abcd", score: 10000 },
+            { rank: 2, user: "0x5678...ef01", score: 9500 },
+            { rank: 3, user: "0x9abc...2345", score: 9000 }
+          ]
+        };
+        return new Response(JSON.stringify(dummyData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       if (path === '/api/game/submit' && request.method === 'POST') {
         const body = await request.json();
         const { wallet, attempts, time_elapsed, final_guess } = body;
