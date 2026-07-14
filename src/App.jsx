@@ -88,6 +88,31 @@ function App() {
   }, []);
 
 
+
+  // Global keyboard listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if game over or any modal is open
+      if (gameOver || showMintModal || showLeaderboard || showInstructions) return;
+      if (e.repeat) return; // Prevent holding down key spam
+
+      const key = e.key;
+
+      if (key === 'Enter') {
+        if (currentGuess.length === 5) submitGuess(currentGuess);
+      } else if (key === 'Backspace') {
+        setCurrentGuess(prev => prev.slice(0, -1));
+      } else if (/^[a-zA-Z]$/.test(key)) {
+        if (currentGuess.length < 5) {
+          setCurrentGuess(prev => prev + key.toUpperCase());
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameOver, showMintModal, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess]);
+
   return (
     <CRTOverlay>
       <div className="w-full h-full flex flex-col items-center pb-12">
