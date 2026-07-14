@@ -4,16 +4,31 @@ import SafeIcon from '../common/SafeIcon';
 
 const { FiCpu, FiLink } = FiIcons;
 
-const WalletButton = ({ dict }) => {
-  const [address, setAddress] = useState(null);
+const WalletButton = ({ dict, address, setAddress }) => {
   const [connecting, setConnecting] = useState(false);
 
-  const connect = () => {
+  const connect = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask or another Web3 wallet.");
+      return;
+    }
+
     setConnecting(true);
-    setTimeout(() => {
-      setAddress('0xAXiM...7f2b');
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        setAddress(accounts[0]);
+      }
+    } catch (error) {
+      console.error("User rejected request or other error:", error);
+    } finally {
       setConnecting(false);
-    }, 1500);
+    }
+  };
+
+  const formatAddress = (addr) => {
+    if (!addr) return '';
+    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
   return (
@@ -27,7 +42,7 @@ const WalletButton = ({ dict }) => {
       }`}
     >
       <SafeIcon icon={connecting ? FiCpu : FiLink} className={connecting ? 'animate-spin' : ''} />
-      {connecting ? 'LINKING...' : address ? `${dict.connected}: ${address}` : dict.connectWallet}
+      {connecting ? 'LINKING...' : address ? `${dict.connected}: ${formatAddress(address)}` : dict.connectWallet}
     </button>
   );
 };
