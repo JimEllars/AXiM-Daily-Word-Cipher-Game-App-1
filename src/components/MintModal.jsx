@@ -44,6 +44,10 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
       const signature = data.signature;
 
       // 2. Mock call to smart contract using window.ethereum if signature is valid
+      if (!window.ethereum) {
+        throw new Error('Missing Environment');
+      }
+
       if (signature && window.ethereum) {
         // Here we would use ethers.js or web3.js to construct the actual transaction.
         // For standard window.ethereum, we simulate a transaction request.
@@ -81,6 +85,8 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
       console.error(err);
       if (err.message === 'API Offline') {
         setErrorMessage(dictionary.apiOffline);
+      } else if (err.message === 'Missing Environment') {
+        setErrorMessage(dictionary.missingEnv || 'ENVIRONMENT OFFLINE');
       } else if (err.code === 4001 || err.message.includes('User denied transaction signature') || err.message === 'Transaction Rejected or missing signature') {
         setErrorMessage(dictionary.txRejected);
       } else {

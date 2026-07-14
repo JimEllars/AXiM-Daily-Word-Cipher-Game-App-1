@@ -1,26 +1,56 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_DATA = {
-  daily: [
-    { rank: 1, user: "AximWhale", score: 9850 },
-    { rank: 2, user: "CyberPunk", score: 9420 },
-    { rank: 3, user: "Satoshi_N", score: 9100 },
-  ],
-  weekly: [
-    { rank: 1, user: "CryptoKing", score: 65400 },
-    { rank: 2, user: "AximWhale", score: 62100 },
-    { rank: 3, user: "Web3Wizard", score: 58900 },
-  ],
-  allTime: [
-    { rank: 1, user: "Genesis_1", score: 850200 },
-    { rank: 2, user: "AlphaTester", score: 790400 },
-    { rank: 3, user: "CryptoKing", score: 745000 },
-  ]
-};
-
 const Leaderboard = ({ isOpen, onClose, dict }) => {
   const [tab, setTab] = useState('daily');
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(false);
+      setData([]);
+
+      const startTime = performance.now();
+
+      try {
+        const response = await fetch(`/api/leaderboard?type=${tab}`);
+        if (!response.ok) {
+          throw new Error('Database offline');
+        }
+        const result = await response.json();
+
+        const endTime = performance.now();
+        console.log(`Telemetry: API /api/leaderboard?type=${tab} response time: ${(endTime - startTime).toFixed(2)}ms`);
+
+        if (isMounted) {
+          setData(result.data || []);
+        }
+      } catch (err) {
+        const endTime = performance.now();
+        console.log(`Telemetry: API /api/leaderboard?type=${tab} failed after: ${(endTime - startTime).toFixed(2)}ms`);
+
+        if (isMounted) {
+          setError(true);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [tab, isOpen]);
 
   if (!isOpen) return null;
 
@@ -49,7 +79,25 @@ const Leaderboard = ({ isOpen, onClose, dict }) => {
         </div>
 
         <div className="space-y-3">
-          {MOCK_DATA[tab].map((entry) => (
+          {isLoading && (
+            <div className="text-neon-green text-center py-4 animate-pulse">
+              [LOADING ARCHIVES...]
+            </div>
+          )}
+
+          {error && !isLoading && (
+            <div className="text-red-500 text-center py-4 font-bold bg-red-500/10 border border-red-500">
+              [DATABASE OFFLINE: CODE 500]
+            </div>
+          )}
+
+          {!isLoading && !error && data.length === 0 && (
+            <div className="text-gray-400 text-center py-4">
+              No records found.
+            </div>
+          )}
+
+          {!isLoading && !error && data.map((entry) => (
             <div key={entry.user} className="flex justify-between items-center p-2 border-b border-neon-green/20">
               <div className="flex items-center gap-4">
                 <span className={`w-6 font-bold ${entry.rank === 1 ? 'text-yellow-400' : 'text-gray-500'}`}>#{entry.rank}</span>

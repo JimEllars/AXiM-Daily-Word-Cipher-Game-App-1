@@ -22,7 +22,9 @@ export const i18n = {
     connected: "CONNECTED",
     daily: "Daily",
     weekly: "Weekly",
-    allTime: "All-Time"
+    allTime: "All-Time",
+    loading: "LOADING...",
+    missingEnv: "ENVIRONMENT OFFLINE"
   },
   es: { 
     score: "Puntaje", 
@@ -47,7 +49,9 @@ export const i18n = {
     connected: "CONECTADO",
     daily: "Diario",
     weekly: "Semanal",
-    allTime: "Todo"
+    allTime: "Todo",
+    loading: "CARGANDO...",
+    missingEnv: "ENTORNO DESCONECTADO"
   },
   fr: { 
     score: "Score", 
@@ -72,6 +76,8 @@ export const i18n = {
     connected: "CONNECTÉ",
     daily: "Quotidien",
     weekly: "Hebdo",
-    allTime: "Global"
+    allTime: "Global",
+    loading: "CHARGEMENT...",
+    missingEnv: "ENVIRONNEMENT HORS LIGNE"
   }
 };
