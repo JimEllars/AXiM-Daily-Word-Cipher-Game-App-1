@@ -1,0 +1,156 @@
+import React, { useState, useEffect } from 'react';
+import Header from './components/Header';
+import StatsPanel from './components/StatsPanel';
+import GameBoard from './components/GameBoard';
+import GameInput from './components/GameInput';
+import BadgesPanel from './components/BadgesPanel';
+import MintModal from './components/MintModal';
+import Leaderboard from './components/Leaderboard';
+import Instructions from './components/Instructions';
+import WalletButton from './components/WalletButton';
+import CRTOverlay from './components/layout/CRTOverlay';
+import { useGameEngine } from './hooks/useGameEngine';
+import { i18n } from './constants/i18n';
+import { getDailyWord } from './constants/words';
+import { motion, AnimatePresence } from 'framer-motion';
+import * as FiIcons from 'react-icons/fi';
+import SafeIcon from './common/SafeIcon';
+
+const { FiBarChart2, FiInfo } = FiIcons;
+
+function App() {
+  const [language, setLanguage] = useState('en');
+  const [showMintModal, setShowMintModal] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  
+  const targetWord = getDailyWord();
+  const dict = i18n[language];
+
+  const {
+    guesses,
+    currentGuess,
+    setCurrentGuess,
+    elapsedSeconds,
+    score,
+    gameOver,
+    hasWon,
+    submitGuess,
+    unlockedBadges,
+    streak
+  } = useGameEngine(targetWord);
+
+  // Show instructions on first load
+  useEffect(() => {
+    const hasVisited = localStorage.getItem('axim_visited');
+    if (!hasVisited) {
+      setShowInstructions(true);
+      localStorage.setItem('axim_visited', 'true');
+    }
+  }, []);
+
+  return (
+    <CRTOverlay>
+      <div className="w-full h-full flex flex-col items-center pb-12">
+        <Header language={language} setLanguage={setLanguage} />
+        
+        <div className="w-full max-w-2xl flex justify-between px-4 mb-4">
+          <WalletButton dict={dict} />
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowLeaderboard(true)}
+              className="p-2 border-2 border-neon-green text-neon-green hover:bg-neon-green/10"
+              title={dict.leaderboard}
+            >
+              <SafeIcon icon={FiBarChart2} />
+            </button>
+            <button 
+              onClick={() => setShowInstructions(true)}
+              className="p-2 border-2 border-neon-pink text-neon-pink hover:bg-neon-pink/10"
+              title={dict.instructions}
+            >
+              <SafeIcon icon={FiInfo} />
+            </button>
+          </div>
+        </div>
+
+        <StatsPanel 
+          score={score} 
+          streak={streak} 
+          time={elapsedSeconds} 
+          dictionary={dict} 
+        />
+
+        <AnimatePresence>
+          {gameOver && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className={`mb-6 p-3 px-6 border-2 font-bold text-center w-full max-w-sm ${hasWon ? 'border-neon-green text-neon-green bg-neon-green/10 shadow-neon-green' : 'border-red-500 text-red-500 bg-red-500/10'}`}
+            >
+              {hasWon ? dict.winMsg : dict.loseMsg}
+              {hasWon && <div className="text-xs mt-1 text-white opacity-80">Final Signal Verified</div>}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <GameBoard 
+          guesses={guesses} 
+          currentGuess={currentGuess} 
+          targetWord={targetWord} 
+        />
+
+        <GameInput 
+          currentGuess={currentGuess}
+          setCurrentGuess={setCurrentGuess}
+          submitGuess={submitGuess}
+          dictionary={dict}
+          disabled={gameOver}
+        />
+
+        <AnimatePresence>
+          {hasWon && !showMintModal && (
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={() => setShowMintModal(true)}
+              className="mt-6 bg-neon-pink text-white border-2 border-neon-pink py-3 px-8 text-lg font-bold font-cyber shadow-neon-pink hover:bg-transparent hover:text-neon-pink transition-all"
+            >
+              {dict.mintBtn}
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <BadgesPanel 
+          unlockedBadges={unlockedBadges} 
+          title={dict.badgesTitle} 
+        />
+
+        {/* Modals */}
+        <Leaderboard 
+          isOpen={showLeaderboard} 
+          onClose={() => setShowLeaderboard(false)} 
+          dict={dict} 
+        />
+        
+        <Instructions 
+          isOpen={showInstructions} 
+          onClose={() => setShowInstructions(false)} 
+          dict={dict} 
+        />
+
+        {showMintModal && (
+          <MintModal 
+            score={score} 
+            dictionary={dict} 
+            onClose={() => setShowMintModal(false)} 
+          />
+        )}
+      </div>
+    </CRTOverlay>
+  );
+}
+
+export default App;

@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-shadow-neon {
+    text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+  }
+  .text-shadow-none {
+    text-shadow: none;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0d0d13;
+  color: #00ff66;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Custom Scrollbar for retro feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0d13;
+}
+::-webkit-scrollbar-thumb {
+  background: #00ff66;
+  border-radius: 4px;
+}
