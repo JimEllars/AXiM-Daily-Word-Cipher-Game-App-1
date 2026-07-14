@@ -42,6 +42,7 @@ function App() {
     streak
   } = useGameEngine(targetWord);
 
+
   // Show instructions on first load
   useEffect(() => {
     const hasVisited = localStorage.getItem('axim_visited');
@@ -50,6 +51,41 @@ function App() {
       localStorage.setItem('axim_visited', 'true');
     }
   }, []);
+
+  // Eager connection check
+  useEffect(() => {
+    const handleAccountsChanged = (accounts) => {
+      if (accounts && accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+      } else {
+        setWalletAddress(null);
+      }
+    };
+
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts && accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+          }
+        } catch (err) {
+          console.error("Silent eager connection check failed", err);
+        }
+
+        window.ethereum.on('accountsChanged', handleAccountsChanged);
+      }
+    };
+
+    checkConnection();
+
+    return () => {
+      if (window.ethereum && window.ethereum.removeListener) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      }
+    };
+  }, []);
+
 
   return (
     <CRTOverlay>
