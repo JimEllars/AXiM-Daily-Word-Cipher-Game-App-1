@@ -13,7 +13,8 @@ import ShareButton from './components/ShareButton';
 import CRTOverlay from './components/layout/CRTOverlay';
 import { useGameEngine } from './hooks/useGameEngine';
 import { i18n } from './constants/i18n';
-import { getDailyWord } from './constants/words';
+import { useAudio } from './hooks/useAudio';
+// import { getDailyWord } from './constants/words';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from './common/SafeIcon';
@@ -27,10 +28,12 @@ function App() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [walletAddress, setWalletAddress] = useState(null);
   
-  const targetWord = getDailyWord();
+  // const targetWord = getDailyWord(); // Moved to useGameEngine
   const dict = i18n[language];
+  const { playClick } = useAudio();
 
   const {
+    targetWord,
     guesses,
     currentGuess,
     setCurrentGuess,
@@ -41,7 +44,7 @@ function App() {
     submitGuess,
     unlockedBadges,
     streak
-  } = useGameEngine(targetWord);
+  } = useGameEngine();
 
 
   // Show instructions on first load
@@ -97,6 +100,7 @@ function App() {
       if (e.repeat) return; // Prevent holding down key spam
 
       const key = e.key;
+      playClick();
 
       if (key === 'Enter') {
         if (currentGuess.length === 5) submitGuess(currentGuess);

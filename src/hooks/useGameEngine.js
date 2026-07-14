@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { FALLBACK_WORDS, getDailyWord } from '../constants/words';
 
 const MAX_SCORE = 10000;
 const PENALTY_PER_ATTEMPT = 400;
 const PENALTY_PER_SECOND = 8;
 const WORD_LENGTH = 5;
 
-export const useGameEngine = (targetWord) => {
+export const useGameEngine = () => {
+  const [targetWord, setTargetWord] = useState('');
   const [guesses, setGuesses] = useState(() => {
     const session = localStorage.getItem('axim_current_session');
     if (session) {
@@ -42,6 +44,40 @@ export const useGameEngine = (targetWord) => {
   const [score, setScore] = useState(MAX_SCORE);
   const [unlockedBadges, setUnlockedBadges] = useState([]);
   const [streak, setStreak] = useState(0);
+
+  // Fetch daily word
+  useEffect(() => {
+    const fetchWord = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch('/api/word/today', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error('API request failed');
+        }
+
+        const data = await response.json();
+        setTargetWord(data.word.toUpperCase());
+      } catch (error) {
+        console.error('[TELEMETRY] DB Fetch failed, utilizing deterministic edge fallback.', error);
+
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 0);
+        const diff = now - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+
+        // Deterministic index based on the day of the year using FALLBACK_WORDS length
+        const index = dayOfYear % FALLBACK_WORDS.length;
+        setTargetWord(FALLBACK_WORDS[index]);
+      }
+    };
+
+    fetchWord();
+  }, []);
 
   // Load persistent streak from local storage
   useEffect(() => {
@@ -134,6 +170,7 @@ export const useGameEngine = (targetWord) => {
     hasWon,
     submitGuess,
     unlockedBadges,
-    streak
+    streak,
+    targetWord
   };
 };
