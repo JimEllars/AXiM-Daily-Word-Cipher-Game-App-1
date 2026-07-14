@@ -6,8 +6,9 @@ import * as FiIcons from 'react-icons/fi';
 const { FiCheckCircle } = FiIcons;
 
 const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) => {
-  const [status, setStatus] = useState('idle'); // idle, processing, success, error
+  const [status, setStatus] = useState('idle'); // idle, processing, pending, success, error
   const [errorMessage, setErrorMessage] = useState('');
+  const [txHash, setTxHash] = useState('');
 
   const submitTransaction = async () => {
     if (!walletAddress) {
@@ -62,9 +63,10 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
         await tx.wait();
         */
 
+
         // Simulating the user prompt and transaction:
         // This is a dummy transaction request to show the MetaMask popup
-        await window.ethereum.request({
+        const txResponse = await window.ethereum.request({
           method: 'eth_sendTransaction',
           params: [
             {
@@ -76,7 +78,14 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
           ],
         });
 
-        setStatus('success');
+        setTxHash(txResponse);
+        setStatus('pending');
+
+        // Simulate blockchain confirmation wait
+        setTimeout(() => {
+          setStatus('success');
+        }, 3000);
+
       } else {
          throw new Error('Transaction Rejected or missing signature');
       }
@@ -136,11 +145,30 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
           </div>
         )}
 
+        {status === 'pending' && (
+          <div className="flex flex-col items-center py-8">
+            <div className="w-12 h-12 border-4 border-neon-pink border-t-transparent rounded-full animate-spin mb-6"></div>
+            <p className="text-neon-pink animate-pulse font-mono text-sm mb-4">
+              PENDING CONFIRMATION
+            </p>
+            {txHash && (
+              <a
+                href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white underline font-mono text-xs"
+              >
+                View on Etherscan
+              </a>
+            )}
+          </div>
+        )}
+
         {status === 'success' && (
           <div className="flex flex-col items-center py-4">
             <SafeIcon icon={FiCheckCircle} className="text-6xl text-neon-green mb-4 shadow-neon-green rounded-full bg-neon-green/20" />
             <p className="text-neon-green font-bold mb-6 font-mono text-center">
-              {dictionary.mintSuccess}
+              TOKENS SECURED
             </p>
             <button 
               onClick={onClose}

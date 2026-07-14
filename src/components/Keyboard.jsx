@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiDelete } from 'react-icons/fi';
+import { useAudio } from '../hooks/useAudio';
 
 const KEYBOARD_ROWS = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -9,6 +10,7 @@ const KEYBOARD_ROWS = [
 ];
 
 const Keyboard = ({ guesses, targetWord, onKeyPress }) => {
+  const { playClick } = useAudio();
   const getKeyStatus = (key) => {
     let status = 'unused';
     for (const guess of guesses) {
@@ -54,7 +56,7 @@ const Keyboard = ({ guesses, targetWord, onKeyPress }) => {
               <motion.button
                 key={key}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => onKeyPress(key)}
+                onClick={() => { playClick(); onKeyPress(key); }}
                 className={`
                   flex items-center justify-center font-bold border-2 rounded-sm
                   transition-colors select-none

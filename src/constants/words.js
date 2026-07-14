@@ -4,6 +4,11 @@ export const DAILY_WORDS = [
   "SWAPS", "COINS", "GASES", "HASHY", "LEDGE", "CRYPT", "ASSET", "SHARD", "SCALE", "PROXY"
 ];
 
+// Fallback words if the Cloudflare API request times out
+export const FALLBACK_WORDS = [
+  "ERROR", "CRASH", "DEBUG", "FAULT", "BRICK"
+];
+
 export const getDailyWord = () => {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
