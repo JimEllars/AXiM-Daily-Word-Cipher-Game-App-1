@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 
 const GameInput = ({ 
@@ -8,13 +8,7 @@ const GameInput = ({
   dictionary, 
   disabled 
 }) => {
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (!disabled && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [disabled]);
+  // Native input removed
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -28,17 +22,7 @@ const GameInput = ({
 
   return (
     <div className="flex flex-col items-center w-full max-w-sm px-4">
-      <input
-        ref={inputRef}
-        type="text"
-        maxLength={5}
-        disabled={disabled}
-        placeholder={dictionary.placeholder}
-        value={currentGuess}
-        onChange={(e) => setCurrentGuess(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())}
-        onKeyDown={handleKeyDown}
-        className="bg-black border-2 border-neon-pink text-neon-pink p-3 text-lg md:text-xl text-center uppercase font-mono w-full outline-none focus:shadow-neon-pink transition-shadow disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-      />
+      {/* Native input removed to prevent OS keyboard on mobile */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.05, filter: disabled ? "none" : "brightness(1.2)" }}
         whileTap={{ scale: disabled ? 1 : 0.95 }}

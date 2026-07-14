@@ -3,6 +3,7 @@ import Header from './components/Header';
 import StatsPanel from './components/StatsPanel';
 import GameBoard from './components/GameBoard';
 import GameInput from './components/GameInput';
+import Keyboard from './components/Keyboard';
 import BadgesPanel from './components/BadgesPanel';
 import MintModal from './components/MintModal';
 import Leaderboard from './components/Leaderboard';
@@ -145,6 +146,21 @@ function App() {
           submitGuess={submitGuess}
           dictionary={dict}
           disabled={gameOver}
+        />
+
+        <Keyboard
+          guesses={guesses}
+          targetWord={targetWord}
+          onKeyPress={(key) => {
+            if (gameOver) return;
+            if (key === 'ENTER') {
+              if (currentGuess.length === 5) submitGuess(currentGuess);
+            } else if (key === 'BACKSPACE') {
+              setCurrentGuess(prev => prev.slice(0, -1));
+            } else if (currentGuess.length < 5) {
+              setCurrentGuess(prev => prev + key);
+            }
+          }}
         />
 
         <AnimatePresence>

@@ -6,9 +6,35 @@ const PENALTY_PER_SECOND = 8;
 const WORD_LENGTH = 5;
 
 export const useGameEngine = (targetWord) => {
-  const [guesses, setGuesses] = useState([]);
+  const [guesses, setGuesses] = useState(() => {
+    const session = localStorage.getItem('axim_current_session');
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        if (parsed.date === new Date().toDateString()) {
+          return parsed.guesses || [];
+        }
+      } catch (e) {
+        console.error('Failed to parse session', e);
+      }
+    }
+    return [];
+  });
   const [currentGuess, setCurrentGuess] = useState('');
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => {
+    const session = localStorage.getItem('axim_current_session');
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        if (parsed.date === new Date().toDateString() && parsed.startTime) {
+          return parsed.startTime;
+        }
+      } catch (e) {
+        console.error('Failed to parse session', e);
+      }
+    }
+    return Date.now();
+  });
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [hasWon, setHasWon] = useState(false);
@@ -57,6 +83,12 @@ export const useGameEngine = (targetWord) => {
     setGuesses(newGuesses);
     setCurrentGuess('');
 
+    localStorage.setItem('axim_current_session', JSON.stringify({
+      guesses: newGuesses,
+      startTime: startTime,
+      date: new Date().toDateString()
+    }));
+
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     let newScore = MAX_SCORE - (newGuesses.length * PENALTY_PER_ATTEMPT) - (elapsed * PENALTY_PER_SECOND);
     newScore = Math.max(0, newScore);
@@ -65,6 +97,7 @@ export const useGameEngine = (targetWord) => {
     if (upperGuess === targetWord) {
       setGameOver(true);
       setHasWon(true);
+      localStorage.removeItem('axim_current_session');
       
       const newStreak = streak + 1;
       setStreak(newStreak);
@@ -75,6 +108,7 @@ export const useGameEngine = (targetWord) => {
     } else if (newScore === 0) {
       setGameOver(true);
       setHasWon(false);
+      localStorage.removeItem('axim_current_session');
     }
     
     return true;
