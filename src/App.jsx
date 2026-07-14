@@ -8,6 +8,7 @@ import MintModal from './components/MintModal';
 import Leaderboard from './components/Leaderboard';
 import Instructions from './components/Instructions';
 import WalletButton from './components/WalletButton';
+import ShareButton from './components/ShareButton';
 import CRTOverlay from './components/layout/CRTOverlay';
 import { useGameEngine } from './hooks/useGameEngine';
 import { i18n } from './constants/i18n';
@@ -23,6 +24,7 @@ function App() {
   const [showMintModal, setShowMintModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [walletAddress, setWalletAddress] = useState(null);
   
   const targetWord = getDailyWord();
   const dict = i18n[language];
@@ -55,7 +57,7 @@ function App() {
         <Header language={language} setLanguage={setLanguage} />
         
         <div className="w-full max-w-2xl flex justify-between px-4 mb-4">
-          <WalletButton dict={dict} />
+          <WalletButton dict={dict} address={walletAddress} setAddress={setWalletAddress} />
           <div className="flex gap-2">
             <button 
               onClick={() => setShowLeaderboard(true)}
@@ -110,16 +112,29 @@ function App() {
         />
 
         <AnimatePresence>
-          {hasWon && !showMintModal && (
-            <motion.button
+          {hasWon && (
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              onClick={() => setShowMintModal(true)}
-              className="mt-6 bg-neon-pink text-white border-2 border-neon-pink py-3 px-8 text-lg font-bold font-cyber shadow-neon-pink hover:bg-transparent hover:text-neon-pink transition-all"
+              className="flex gap-4 mt-6"
             >
-              {dict.mintBtn}
-            </motion.button>
+              {!showMintModal && (
+                <button
+                  onClick={() => setShowMintModal(true)}
+                  className="bg-neon-pink text-white border-2 border-neon-pink py-3 px-8 text-lg font-bold font-cyber shadow-neon-pink hover:bg-transparent hover:text-neon-pink transition-all"
+                >
+                  {dict.mintBtn}
+                </button>
+              )}
+              <ShareButton
+                dict={dict}
+                guesses={guesses}
+                targetWord={targetWord}
+                score={score}
+                streak={streak}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -144,6 +159,8 @@ function App() {
         {showMintModal && (
           <MintModal 
             score={score} 
+            time_elapsed={elapsedSeconds}
+            walletAddress={walletAddress}
             dictionary={dict} 
             onClose={() => setShowMintModal(false)} 
           />
