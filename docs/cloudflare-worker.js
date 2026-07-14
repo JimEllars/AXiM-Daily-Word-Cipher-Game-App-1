@@ -17,19 +17,32 @@ export default {
 
 
     try {
-      if (path === '/api/leaderboard' && request.method === 'GET') {
+if (path === '/api/leaderboard' && request.method === 'GET') {
         const type = url.searchParams.get('type') || 'allTime';
-        // D1 Query Stub based on type: SELECT username, total_all_time_score as score FROM Users ORDER BY score DESC LIMIT 10
-        const dummyData = {
-          data: [
-            { rank: 1, user: "0x1234...abcd", score: 10000 },
-            { rank: 2, user: "0x5678...ef01", score: 9500 },
-            { rank: 3, user: "0x9abc...2345", score: 9000 }
-          ]
-        };
-        return new Response(JSON.stringify(dummyData), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+
+        let query = "SELECT username as user, total_all_time_score as score FROM Users WHERE total_all_time_score > 0 ORDER BY total_all_time_score DESC LIMIT 10";
+        // If type is daily, fallback to allTime for now as schema isn't fully set
+
+        try {
+          const { results } = await env.DB.prepare(query).all();
+
+          // Map to format required by frontend
+          const formattedData = results.map((row, index) => ({
+            rank: index + 1,
+            user: row.user,
+            score: row.score
+          }));
+
+          return new Response(JSON.stringify({ data: formattedData }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (dbError) {
+          console.error("DB Error", dbError);
+          return new Response(JSON.stringify({ error: 'Database error' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       if (path === '/api/game/submit' && request.method === 'POST') {

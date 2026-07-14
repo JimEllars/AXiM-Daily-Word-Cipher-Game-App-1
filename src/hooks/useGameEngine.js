@@ -21,19 +21,20 @@ export const useGameEngine = (targetWord) => {
     return [];
   });
   const [currentGuess, setCurrentGuess] = useState('');
-  const [startTime] = useState(() => {
+  const [sessionStart] = useState(() => Date.now());
+  const [accumulatedSeconds, setAccumulatedSeconds] = useState(() => {
     const session = localStorage.getItem('axim_current_session');
     if (session) {
       try {
         const parsed = JSON.parse(session);
-        if (parsed.date === new Date().toDateString() && parsed.startTime) {
-          return parsed.startTime;
+        if (parsed.date === new Date().toDateString() && parsed.accumulatedSeconds) {
+          return parsed.accumulatedSeconds;
         }
       } catch (e) {
         console.error('Failed to parse session', e);
       }
     }
-    return Date.now();
+    return 0;
   });
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -59,10 +60,11 @@ export const useGameEngine = (targetWord) => {
     if (gameOver) return;
     
     const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      setElapsedSeconds(elapsed);
+      const currentElapsed = Math.floor((Date.now() - sessionStart) / 1000);
+      const totalElapsed = accumulatedSeconds + currentElapsed;
+      setElapsedSeconds(totalElapsed);
       
-      let newScore = MAX_SCORE - (guesses.length * PENALTY_PER_ATTEMPT) - (elapsed * PENALTY_PER_SECOND);
+      let newScore = MAX_SCORE - (guesses.length * PENALTY_PER_ATTEMPT) - (totalElapsed * PENALTY_PER_SECOND);
       newScore = Math.max(0, newScore);
       setScore(newScore);
 
@@ -73,7 +75,7 @@ export const useGameEngine = (targetWord) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [startTime, gameOver, guesses.length]);
+  }, [sessionStart, accumulatedSeconds, gameOver, guesses.length]);
 
   const submitGuess = useCallback((guessStr) => {
     if (gameOver || guessStr.length !== WORD_LENGTH) return false;
@@ -85,11 +87,11 @@ export const useGameEngine = (targetWord) => {
 
     localStorage.setItem('axim_current_session', JSON.stringify({
       guesses: newGuesses,
-      startTime: startTime,
+      accumulatedSeconds: accumulatedSeconds + Math.floor((Date.now() - sessionStart) / 1000),
       date: new Date().toDateString()
     }));
 
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const elapsed = accumulatedSeconds + Math.floor((Date.now() - sessionStart) / 1000);
     let newScore = MAX_SCORE - (newGuesses.length * PENALTY_PER_ATTEMPT) - (elapsed * PENALTY_PER_SECOND);
     newScore = Math.max(0, newScore);
     setScore(newScore);
@@ -112,7 +114,7 @@ export const useGameEngine = (targetWord) => {
     }
     
     return true;
-  }, [gameOver, guesses, startTime, targetWord, streak]);
+  }, [gameOver, guesses, sessionStart, accumulatedSeconds, targetWord, streak]);
 
   const evaluateBadges = (attempts, time, currentStreak) => {
     const newBadges = ['genesis'];
