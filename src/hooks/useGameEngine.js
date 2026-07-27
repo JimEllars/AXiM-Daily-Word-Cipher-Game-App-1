@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTelemetry } from './useTelemetry';
 import { FALLBACK_WORDS, getDailyWord } from '../constants/words';
+import { ethers } from 'ethers';
+import { WEB3_CONFIG } from '../config/web3';
 
 const MAX_SCORE = 10000;
 const PENALTY_PER_ATTEMPT = 400;
 const PENALTY_PER_SECOND = 8;
 const WORD_LENGTH = 5;
 
-export const useGameEngine = () => {
-  const [targetWord, setTargetWord] = useState('');
+export const useGameEngine = (walletAddress) => {
+    const { trackEvent } = useTelemetry();
+  const hasTrackedStart = useRef(false);
+const [targetWord, setTargetWord] = useState('');
   const [guesses, setGuesses] = useState(() => {
     const session = localStorage.getItem('axim_current_session');
     if (session) {
@@ -45,6 +50,69 @@ export const useGameEngine = () => {
   const [unlockedBadges, setUnlockedBadges] = useState([]);
   const [streak, setStreak] = useState(0);
 
+  const [hasMintedToday, setHasMintedToday] = useState(false);
+
+
+
+  useEffect(() => {
+    if (!hasTrackedStart.current && !gameOver) {
+      trackEvent('GAME_STARTED', { timestamp: Date.now() });
+      hasTrackedStart.current = true;
+    }
+  }, [gameOver, trackEvent]);
+
+
+
+  // Cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'axim_current_session') {
+        if (!e.newValue) {
+          // If session was flushed (e.g. next day)
+          setGuesses([]);
+          setAccumulatedSeconds(0);
+          setElapsedSeconds(0);
+          setScore(MAX_SCORE);
+          setGameOver(false);
+          setHasWon(false);
+        } else {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed.date === new Date().toDateString()) {
+              if (parsed.guesses !== undefined) setGuesses(parsed.guesses);
+              if (parsed.accumulatedSeconds !== undefined) setAccumulatedSeconds(parsed.accumulatedSeconds);
+              if (parsed.elapsedSeconds !== undefined) setElapsedSeconds(parsed.elapsedSeconds);
+              if (parsed.score !== undefined) setScore(parsed.score);
+              if (parsed.gameOver !== undefined) setGameOver(parsed.gameOver);
+              if (parsed.hasWon !== undefined) setHasWon(parsed.hasWon);
+            }
+          } catch (err) {
+            console.error('Failed to sync session from storage event', err);
+          }
+        }
+      } else if (e.key === 'axim_last_minted_day_id') {
+        const todayId = Math.floor(Date.now() / 86400000).toString();
+        if (e.newValue === todayId) {
+          setHasMintedToday(true);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Dynamic Document Title
+  useEffect(() => {
+    if (hasWon) {
+      document.title = "AXiM Cipher | Decrypted 🔓";
+    } else if (gameOver) {
+      document.title = "AXiM Cipher | Failed ❌";
+    } else {
+      document.title = "AXiM Cipher | Playing...";
+    }
+  }, [hasWon, gameOver]);
+
   // Fetch daily word
   useEffect(() => {
     const fetchWord = async () => {
@@ -78,6 +146,44 @@ export const useGameEngine = () => {
 
     fetchWord();
   }, []);
+
+
+  useEffect(() => {
+    const checkMintStatus = async () => {
+      const todayId = Math.floor(Date.now() / 86400000).toString();
+      let onChainMinted = false;
+
+      if (walletAddress && window.ethereum) {
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          // Dummy contract address and ABI for demo
+          const CONTRACT_ADDRESS = WEB3_CONFIG.CONTRACT_ADDRESS;
+          const ABI = ['function lastClaimDay(address) view returns (uint256)'];
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+          const lastClaim = await contract.lastClaimDay(walletAddress);
+          if (lastClaim.toString() === todayId) {
+            onChainMinted = true;
+          }
+        } catch (error) {
+          console.error('[TELEMETRY] RPC read failed, falling back to local storage', error);
+        }
+      }
+
+      if (onChainMinted) {
+        setHasMintedToday(true);
+      } else {
+        const lastMinted = localStorage.getItem('axim_last_minted_day_id');
+        if (lastMinted === todayId) {
+          setHasMintedToday(true);
+        } else {
+          setHasMintedToday(false);
+        }
+      }
+    };
+
+    checkMintStatus();
+  }, [walletAddress]);
 
   // Load persistent streak from local storage
   useEffect(() => {
@@ -119,6 +225,8 @@ export const useGameEngine = () => {
     const upperGuess = guessStr.toUpperCase();
     const newGuesses = [...guesses, upperGuess];
     setGuesses(newGuesses);
+    trackEvent('GUESS_SUBMITTED', { attemptNumber: newGuesses.length, guess: upperGuess });
+
     setCurrentGuess('');
 
     localStorage.setItem('axim_current_session', JSON.stringify({
@@ -142,11 +250,33 @@ export const useGameEngine = () => {
       localStorage.setItem('axim_streak', newStreak);
       localStorage.setItem('axim_last_played', new Date().toDateString());
       
+
+      // Update guess distribution
+      const dist = JSON.parse(localStorage.getItem('axim_guess_distribution')) || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, "6+": 0 };
+      const attempts = newGuesses.length;
+      const bucket = attempts >= 6 ? "6+" : attempts.toString();
+      dist[bucket] = (dist[bucket] || 0) + 1;
+      localStorage.setItem('axim_guess_distribution', JSON.stringify(dist));
+
       evaluateBadges(newGuesses.length, elapsed, newStreak);
+      trackEvent('GAME_COMPLETED', {
+        hasWon: true,
+        score: newScore,
+        streak: newStreak,
+        time_elapsed: elapsed
+      });
+
     } else if (newScore === 0) {
       setGameOver(true);
       setHasWon(false);
       localStorage.removeItem('axim_current_session');
+      trackEvent('GAME_COMPLETED', {
+        hasWon: false,
+        score: 0,
+        streak: streak,
+        time_elapsed: elapsed
+      });
+
     }
     
     return true;
@@ -171,6 +301,8 @@ export const useGameEngine = () => {
     submitGuess,
     unlockedBadges,
     streak,
-    targetWord
+    targetWord,
+    hasMintedToday,
+    setHasMintedToday
   };
 };

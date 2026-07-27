@@ -80,7 +80,7 @@ const Leaderboard = ({ isOpen, onClose, dict }) => {
 
         <div className="space-y-3">
           {isLoading && (
-            <div className="text-neon-green text-center py-4 animate-pulse">
+            <div className="text-neon-green text-center py-4 ">
               [LOADING ARCHIVES...]
             </div>
           )}
