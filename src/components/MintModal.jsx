@@ -2,15 +2,26 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
+import TurnstileWidget from './TurnstileWidget';
+import { useTelemetry } from '../hooks/useTelemetry';
+import { WEB3_CONFIG } from '../config/web3';
 
 const { FiCheckCircle } = FiIcons;
 
-const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) => {
+const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, setHasMintedToday }) => {
   const [status, setStatus] = useState('idle'); // idle, processing, pending, success, error
   const [errorMessage, setErrorMessage] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const { trackEvent } = useTelemetry();
 
   const submitTransaction = async () => {
+    if (!turnstileToken) {
+      trackEvent('TURNSTILE_CHALLENGE_FAILED', { reason: 'No token' });
+      setErrorMessage("Please complete the Turnstile challenge");
+      setStatus('error');
+      return;
+    }
     if (!walletAddress) {
       setErrorMessage(dictionary.connectWallet);
       setStatus('error');
@@ -30,7 +41,8 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
         body: JSON.stringify({
           walletAddress,
           score,
-          time_elapsed
+          time_elapsed,
+          'cf-turnstile-response': turnstileToken
         }),
       });
 
@@ -66,7 +78,10 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
 
         // Simulating the user prompt and transaction:
         // This is a dummy transaction request to show the MetaMask popup
+
+        trackEvent('MINT_TRANSACTION_INITIATED', { walletAddress, score });
         const txResponse = await window.ethereum.request({
+
           method: 'eth_sendTransaction',
           params: [
             {
@@ -83,7 +98,13 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
 
         // Simulate blockchain confirmation wait
         setTimeout(() => {
+
+          trackEvent('MINT_TRANSACTION_CONFIRMED', { txHash: txResponse });
           setStatus('success');
+
+          const todayId = Math.floor(Date.now() / 86400000).toString();
+          localStorage.setItem('axim_last_minted_day_id', todayId);
+          if(setHasMintedToday) setHasMintedToday(true);
         }, 3000);
 
       } else {
@@ -97,7 +118,10 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
       } else if (err.message === 'Missing Environment') {
         setErrorMessage(dictionary.missingEnv || 'ENVIRONMENT OFFLINE');
       } else if (err.code === 4001 || err.message.includes('User denied transaction signature') || err.message === 'Transaction Rejected or missing signature') {
+
+        trackEvent('MINT_TRANSACTION_REJECTED', { walletAddress, error: err.message });
         setErrorMessage(dictionary.txRejected);
+
       } else {
         setErrorMessage(dictionary.apiOffline); // Default error
       }
@@ -130,6 +154,14 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
             >
               SIGN & SUBMIT TX
             </button>
+            {status === 'idle' && (
+              <TurnstileWidget onVerify={(token) => {
+                trackEvent('TURNSTILE_CHALLENGE_PASSED', { tokenPrefix: token.substring(0, 10) });
+                setTurnstileToken(token);
+                setErrorMessage('');
+              }} />
+            )}
+
             <button onClick={onClose} className="text-gray-500 hover:text-white text-sm">
               CANCEL
             </button>
@@ -139,7 +171,7 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
         {status === 'processing' && (
           <div className="flex flex-col items-center py-8">
             <div className="w-12 h-12 border-4 border-neon-pink border-t-transparent rounded-full animate-spin mb-6"></div>
-            <p className="text-neon-pink animate-pulse font-mono text-sm">
+            <p className="text-neon-pink  font-mono text-sm">
               {dictionary.processing}
             </p>
           </div>
@@ -148,12 +180,12 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose }) 
         {status === 'pending' && (
           <div className="flex flex-col items-center py-8">
             <div className="w-12 h-12 border-4 border-neon-pink border-t-transparent rounded-full animate-spin mb-6"></div>
-            <p className="text-neon-pink animate-pulse font-mono text-sm mb-4">
+            <p className="text-neon-pink  font-mono text-sm mb-4">
               PENDING CONFIRMATION
             </p>
             {txHash && (
               <a
-                href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                href={`${WEB3_CONFIG.EXPLORER_URL}/tx/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white underline font-mono text-xs"

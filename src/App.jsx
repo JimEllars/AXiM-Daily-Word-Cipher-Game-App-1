@@ -43,8 +43,10 @@ function App() {
     hasWon,
     submitGuess,
     unlockedBadges,
-    streak
-  } = useGameEngine();
+    streak,
+    hasMintedToday,
+    setHasMintedToday
+  } = useGameEngine(walletAddress);
 
 
   // Show instructions on first load
@@ -146,7 +148,8 @@ function App() {
           score={score} 
           streak={streak} 
           time={elapsedSeconds} 
-          dictionary={dict} 
+          dictionary={dict}
+          currentAttempts={hasWon ? guesses.length : null}
         />
 
         <AnimatePresence>
@@ -174,6 +177,7 @@ function App() {
           setCurrentGuess={setCurrentGuess}
           submitGuess={submitGuess}
           dictionary={dict}
+          currentAttempts={hasWon ? guesses.length : null}
           disabled={gameOver}
         />
 
@@ -200,13 +204,18 @@ function App() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="flex gap-4 mt-6"
             >
-              {!showMintModal && (
+              {!showMintModal && !hasMintedToday && (
                 <button
                   onClick={() => setShowMintModal(true)}
                   className="bg-neon-pink text-white border-2 border-neon-pink py-3 px-8 text-lg font-bold font-cyber shadow-neon-pink hover:bg-transparent hover:text-neon-pink transition-all"
                 >
                   {dict.mintBtn}
                 </button>
+              )}
+              {hasMintedToday && (
+                <div className="flex items-center justify-center px-4 py-2 border-2 border-neon-green/50 opacity-50 text-neon-green font-bold text-center">
+                  [ TOKENS SECURED FOR CYCLE ]
+                </div>
               )}
               <ShareButton
                 dict={dict}
@@ -242,8 +251,10 @@ function App() {
             score={score} 
             time_elapsed={elapsedSeconds}
             walletAddress={walletAddress}
-            dictionary={dict} 
-            onClose={() => setShowMintModal(false)} 
+            dictionary={dict}
+          currentAttempts={hasWon ? guesses.length : null}
+            onClose={() => setShowMintModal(false)}
+            setHasMintedToday={setHasMintedToday}
           />
         )}
       </div>
