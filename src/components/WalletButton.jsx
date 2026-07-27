@@ -33,7 +33,7 @@ const WalletButton = ({ dict, address, setAddress }) => {
 
   return (
     <button 
-      onClick={!address ? connect : null}
+      onClick={!address ? connect : () => setAddress(null)}
       disabled={connecting}
       className={`flex items-center gap-2 px-4 py-2 border-2 font-mono text-xs transition-all ${
         address 
