@@ -1,24 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GameBoard = ({ guesses, currentGuess, targetWord }) => {
   const [hint, setHint] = useState(null);
+  const [displayedHint, setDisplayedHint] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [hintError, setHintError] = useState(false);
 
-  const fetchHint = async () => {
+  const turnstileContainerRef = useRef(null);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const [isTurnstileRequired, setIsTurnstileRequired] = useState(false);
+
+  useEffect(() => {
+    if (isTurnstileRequired && !window.turnstileScriptLoaded) {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+      window.turnstileScriptLoaded = true;
+    }
+  }, [isTurnstileRequired]);
+
+  useEffect(() => {
+    let widgetId = null;
+    if (isTurnstileRequired && turnstileContainerRef.current) {
+      const renderWidget = () => {
+        if (window.turnstile && turnstileContainerRef.current) {
+          try {
+            widgetId = window.turnstile.render(turnstileContainerRef.current, {
+              sitekey: '1x00000000000000000000AA', // Dummy key for testing
+              callback: function(token) {
+                setTurnstileToken(token);
+              },
+              theme: 'dark'
+            });
+          } catch(e) {
+            console.error("Turnstile render error", e);
+          }
+        }
+      };
+
+      if (window.turnstile) {
+        renderWidget();
+      } else {
+        const interval = setInterval(() => {
+          if (window.turnstile) {
+            clearInterval(interval);
+            renderWidget();
+          }
+        }, 500);
+        return () => clearInterval(interval);
+      }
+    }
+    return () => {
+      if (widgetId && window.turnstile) {
+        window.turnstile.remove(widgetId);
+      }
+    };
+  }, [isTurnstileRequired]);
+
+  useEffect(() => {
+    if (turnstileToken && isHintLoading) {
+      executeFetchHint(turnstileToken);
+    }
+  }, [turnstileToken]);
+
+
+  useEffect(() => {
+    if (hint && isTyping) {
+      let i = 0;
+      const interval = setInterval(() => {
+        setDisplayedHint(hint.slice(0, i + 1));
+        i++;
+        if (i >= hint.length) {
+          setIsTyping(false);
+          clearInterval(interval);
+        }
+      }, 40); // 40ms per character
+      return () => clearInterval(interval);
+    }
+  }, [hint, isTyping]);
+
+  const fetchHint = () => {
     setIsHintLoading(true);
     setHintError(false);
+    setIsTurnstileRequired(true);
+  };
+
+  const executeFetchHint = async (token) => {
     try {
-      const response = await fetch('/api/hint/today');
-      if (!response.ok) throw new Error('Failed to fetch hint');
+      const response = await fetch('/api/hint/today', {
+        headers: {
+          'X-Turnstile-Token': token
+        }
+      });
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Turnstile timeout');
+        }
+        throw new Error('Failed to fetch hint');
+      }
       const data = await response.json();
       setHint(data.hint);
+      setDisplayedHint("");
+      setIsTyping(true);
     } catch (error) {
       console.error(error);
       setHintError(true);
     } finally {
       setIsHintLoading(false);
+      setIsTurnstileRequired(false);
+      setTurnstileToken(null);
     }
   };
 
@@ -120,7 +214,9 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
             className="mb-6 max-w-sm w-full p-4 border-l-4 border-yellow-400 bg-yellow-400/10"
           >
             <div className="text-yellow-400 font-cyber text-xs mb-2">SYSTEM.AI_HINT //</div>
-            <div className="text-white italic text-sm">"{hint}"</div>
+            <div className="text-white italic text-sm font-mono">
+              "{displayedHint}"{isTyping && <span className="animate-pulse">_</span>}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -132,10 +228,11 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
             animate={{ opacity: 1 }}
             className="mb-6 text-red-500 font-cyber text-xs"
           >
-            ERROR: SIGNAL INTERCEPTED
+            [ AI LINK SEVERED - RETRY ]
           </motion.div>
         )}
       </AnimatePresence>
+      <div ref={turnstileContainerRef} className="hidden" />
     </div>
   );
 };

@@ -1,4 +1,5 @@
-import { useCallback, useEffect } from 'react';
+const fs = require('fs');
+const content = `import { useCallback, useEffect } from 'react';
 
 export const useTelemetry = () => {
   const processQueue = useCallback(async () => {
@@ -39,7 +40,7 @@ export const useTelemetry = () => {
   }, [processQueue]);
 
   const trackEvent = useCallback((eventName, payload = {}) => {
-    console.log(`[AXiM Telemetry] ${eventName} | Data:`, JSON.stringify(payload));
+    console.log(\`[AXiM Telemetry] \${eventName} | Data:\`, JSON.stringify(payload));
 
     const eventPayload = { eventName, payload };
 
@@ -63,7 +64,7 @@ export const useTelemetry = () => {
         }
       } catch (e) {
         // Fail silently so that network telemetry drops never disrupt gameplay
-        console.warn(`[AXiM Telemetry] Dropped event: ${eventName}. Queuing for retry.`);
+        console.warn(\`[AXiM Telemetry] Dropped event: \${eventName}. Queuing for retry.\`);
         try {
           const queue = JSON.parse(localStorage.getItem('axim_telemetry_queue') || '[]');
           queue.push(eventPayload);
@@ -77,3 +78,5 @@ export const useTelemetry = () => {
 
   return { trackEvent };
 };
+`;
+fs.writeFileSync('src/hooks/useTelemetry.js', content);
