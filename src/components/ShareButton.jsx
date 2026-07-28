@@ -46,12 +46,25 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
 
   const handleShare = async () => {
     const textToShare = generateShareText();
-    try {
-      await navigator.clipboard.writeText(textToShare);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'AXiM Cipher',
+          text: textToShare,
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to share: ', err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(textToShare);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
     }
   };
 

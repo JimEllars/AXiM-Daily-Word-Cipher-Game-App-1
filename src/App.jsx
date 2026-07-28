@@ -125,7 +125,12 @@ function App() {
         <Header language={language} setLanguage={setLanguage} />
         
         <div className="w-full max-w-2xl flex justify-between px-4 mb-4">
-          <WalletButton dict={dict} address={walletAddress} setAddress={setWalletAddress} />
+          <WalletButton dict={dict} address={walletAddress} setAddress={(addr) => {
+            setWalletAddress(addr);
+            if (!addr) {
+              setHasMintedToday(false);
+            }
+          }} />
           <div className="flex gap-2">
             <button 
               onClick={() => setShowLeaderboard(true)}
@@ -238,6 +243,7 @@ function App() {
           isOpen={showLeaderboard} 
           onClose={() => setShowLeaderboard(false)} 
           dict={dict} 
+          walletAddress={walletAddress}
         />
         
         <Instructions 

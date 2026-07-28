@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const Leaderboard = ({ isOpen, onClose, dict }) => {
+const Leaderboard = ({ isOpen, onClose, dict, walletAddress }) => {
   const [tab, setTab] = useState('daily');
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +106,16 @@ const Leaderboard = ({ isOpen, onClose, dict }) => {
               <span className="text-neon-green">{entry.score}</span>
             </div>
           ))}
+
+          {walletAddress && !isLoading && !error && (
+            <div className="flex justify-between items-center p-2 border border-neon-pink bg-neon-pink/10 mt-4">
+              <div className="flex items-center gap-4">
+                <span className="w-6 font-bold text-neon-pink">--</span>
+                <span className="text-white">YOUR RANK: {walletAddress.substring(0,6)}...</span>
+              </div>
+              <span className="text-neon-pink">CALCULATING...</span>
+            </div>
+          )}
         </div>
 
         <button 
