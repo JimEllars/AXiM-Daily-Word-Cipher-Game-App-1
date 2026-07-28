@@ -91,6 +91,38 @@ export default {
       }
 
       if (path === '/api/hint/today' && request.method === 'GET') {
+        // RATE LIMITING
+        const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+        if (env.DB && clientIP !== 'unknown') {
+          // Ensure table exists
+          try {
+            await env.DB.prepare(`
+              CREATE TABLE IF NOT EXISTS HintRateLimits (
+                ip TEXT,
+                timestamp INTEGER
+              )
+            `).run();
+
+            // Cleanup older than 24 hours
+            const dayAgo = Date.now() - (24 * 60 * 60 * 1000);
+            await env.DB.prepare('DELETE FROM HintRateLimits WHERE timestamp < ?').bind(dayAgo).run();
+
+            // Check count
+            const countResult = await env.DB.prepare('SELECT COUNT(*) as count FROM HintRateLimits WHERE ip = ?').bind(clientIP).first();
+            if (countResult && countResult.count >= 3) {
+              return new Response(JSON.stringify({ error: 'Too Many Requests: Daily hint limit reached.' }), {
+                status: 429,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+
+            // Insert new request
+            await env.DB.prepare('INSERT INTO HintRateLimits (ip, timestamp) VALUES (?, ?)').bind(clientIP, Date.now()).run();
+          } catch (rlError) {
+            console.error('Rate limiting error', rlError);
+          }
+        }
+
         // TURNSTILE VALIDATION
         const turnstileToken = request.headers.get('Authorization') || request.headers.get('X-Turnstile-Token');
         const turnstileSecret = env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
