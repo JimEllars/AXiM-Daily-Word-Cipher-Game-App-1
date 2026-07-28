@@ -167,7 +167,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
         ))}
 
         {/* Current active row (only if not won/lost yet) */}
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${guesses.length === 5 ? 'animate-pulse-red rounded-sm border border-transparent' : ''}`}>
           {Array.from({ length: WORD_LENGTH }).map((_, colIdx) => {
             const letter = currentGuess[colIdx] || '';
             return renderTile(letter, null, colIdx);
