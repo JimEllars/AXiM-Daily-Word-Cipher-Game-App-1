@@ -55,6 +55,94 @@ export default {
 
 
     try {
+      if (path === '/api/telemetry' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          if (env.ANALYTICS) {
+            env.ANALYTICS.writeDataPoint({
+              blobs: [
+                body.eventName || 'UNKNOWN',
+                JSON.stringify(body.payload || {})
+              ],
+              doubles: [
+                Date.now()
+              ],
+              indexes: [
+                (body.eventName || 'UNKNOWN').substring(0, 32)
+              ]
+            });
+          } else if (env.DB) {
+            // Fallback to D1 TelemetryLogs
+            const query = "INSERT INTO TelemetryLogs (event_name, payload, timestamp) VALUES (?, ?, ?)";
+            await env.DB.prepare(query).bind(
+              body.eventName || 'UNKNOWN',
+              JSON.stringify(body.payload || {}),
+              Date.now()
+            ).run();
+          }
+        } catch (telemetryError) {
+          console.error("Telemetry error", telemetryError);
+          // Fail silently for telemetry
+        }
+
+        return new Response(JSON.stringify({ status: 'success' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (path === '/api/hint/today' && request.method === 'GET') {
+        const cache = caches.default;
+        const cacheKey = new Request(url.toString(), request);
+        let response = await cache.match(cacheKey);
+
+        if (!response) {
+          const dayId = Math.floor(Date.now() / 86400000);
+          const targetWord = await getWordForToday(env, dayId);
+
+          try {
+            const aiResponse = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+              messages: [
+                { role: 'system', content: `You are a cyberpunk AI terminal. The secret word today is ${targetWord}. Generate a cryptic, 10-word maximum hint. Do not reveal the word.` }
+              ]
+            });
+
+            response = new Response(JSON.stringify({ hint: aiResponse.response }), {
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+                'Cache-Control': 's-maxage=86400'
+              }
+            });
+
+            // Cache the response
+            // We clone the response to cache it because we will send the original response back to the client
+            ctx.waitUntil(cache.put(cacheKey, response.clone()));
+
+          } catch (aiError) {
+            console.error("AI Error", aiError);
+            response = new Response(JSON.stringify({ error: 'AI hint generation failed' }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        }
+
+        // We need to return a new Response with corsHeaders from the cached response
+        // because the cached response might be missing them if we aren't careful, but we added them above.
+        // Wait, cache API needs a Response object. If it is cached, we just return it.
+        // However, we need to ensure CORS headers are present.
+        const responseHeaders = new Headers(response.headers);
+        for (const [key, value] of Object.entries(corsHeaders)) {
+          responseHeaders.set(key, value);
+        }
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders
+        });
+      }
+
       if (path === '/api/word/today' && request.method === 'GET') {
         const dayId = Math.floor(Date.now() / 86400000);
         const word = await getWordForToday(env, dayId);
