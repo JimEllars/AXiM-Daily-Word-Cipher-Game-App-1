@@ -113,6 +113,32 @@ const [targetWord, setTargetWord] = useState('');
     }
   }, [hasWon, gameOver]);
 
+
+  // Dynamic Favicon State
+  useEffect(() => {
+    let faviconLink = document.querySelector("link[rel~='icon']");
+    if (!faviconLink) {
+      faviconLink = document.createElement('link');
+      faviconLink.rel = 'icon';
+      document.head.appendChild(faviconLink);
+    }
+
+    // Default icon from index.html: https://greta-preview.s3.us-east-2.amazonaws.com/assets/logo.svg
+    // Alert icon can be a localized data URI or an active alert version. Let's create an SVG data URI for alert.
+    const defaultIcon = "https://greta-preview.s3.us-east-2.amazonaws.com/assets/logo.svg";
+
+    // A simple red alert/active circle or the original logo with a red tint. We will use a neon-tinted active SVG.
+    const alertIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="%23ff003c" stroke-width="10" fill="none" /><circle cx="50" cy="50" r="10" fill="%23ff003c" /></svg>`;
+
+    const hasPlayedToday = hasWon || gameOver;
+    if (!hasPlayedToday && !hasMintedToday) {
+      faviconLink.href = alertIcon;
+    } else {
+      faviconLink.href = defaultIcon;
+    }
+  }, [hasWon, gameOver, hasMintedToday]);
+
+
   // Fetch daily word
   useEffect(() => {
     const fetchWord = async () => {

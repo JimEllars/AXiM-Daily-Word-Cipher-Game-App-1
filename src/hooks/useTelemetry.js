@@ -33,6 +33,14 @@ export const useTelemetry = () => {
     }
   }, []);
 
+
+  useEffect(() => {
+    const queue = JSON.parse(localStorage.getItem('axim_telemetry_queue') || '[]');
+    if (navigator.onLine && queue.length > 0) {
+      processQueue();
+    }
+  }, [processQueue]);
+
   useEffect(() => {
     window.addEventListener('online', processQueue);
     return () => window.removeEventListener('online', processQueue);

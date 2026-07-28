@@ -11,7 +11,9 @@ import Instructions from './components/Instructions';
 import WalletButton from './components/WalletButton';
 import ShareButton from './components/ShareButton';
 import CRTOverlay from './components/layout/CRTOverlay';
+import ErrorBoundary from './components/layout/ErrorBoundary';
 import { useGameEngine } from './hooks/useGameEngine';
+import { useTelemetry } from './hooks/useTelemetry';
 import { i18n } from './constants/i18n';
 import { useAudio } from './hooks/useAudio';
 // import { getDailyWord } from './constants/words';
@@ -22,6 +24,7 @@ import SafeIcon from './common/SafeIcon';
 const { FiBarChart2, FiInfo } = FiIcons;
 
 function App() {
+  const { trackEvent } = useTelemetry();
   const [language, setLanguage] = useState('en');
   const [showMintModal, setShowMintModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -171,11 +174,13 @@ function App() {
           )}
         </AnimatePresence>
 
+        <ErrorBoundary>
         <GameBoard 
           guesses={guesses} 
           currentGuess={currentGuess} 
           targetWord={targetWord} 
         />
+        </ErrorBoundary>
 
         <GameInput 
           currentGuess={currentGuess}
@@ -253,6 +258,7 @@ function App() {
         />
 
         {showMintModal && (
+          <ErrorBoundary>
           <MintModal 
             score={score} 
             time_elapsed={elapsedSeconds}
@@ -262,6 +268,7 @@ function App() {
             onClose={() => setShowMintModal(false)}
             setHasMintedToday={setHasMintedToday}
           />
+          </ErrorBoundary>
         )}
       </div>
     </CRTOverlay>
