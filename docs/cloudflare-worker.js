@@ -101,9 +101,14 @@ export default {
 
         try {
           if (env.DB) {
-            // Get the last 1000 events
-            const query = "SELECT * FROM TelemetryLogs ORDER BY created_at DESC LIMIT 1000";
-            const { results } = await env.DB.prepare(query).all();
+            const urlObj = new URL(request.url);
+            const limitParam = parseInt(urlObj.searchParams.get('limit'), 10);
+            const limit = isNaN(limitParam) ? 1000 : Math.min(Math.max(1, limitParam), 1000);
+            const offsetParam = parseInt(urlObj.searchParams.get('offset'), 10);
+            const offset = isNaN(offsetParam) ? 0 : Math.max(0, offsetParam);
+
+            const query = "SELECT * FROM TelemetryLogs ORDER BY created_at DESC LIMIT ? OFFSET ?";
+            const { results } = await env.DB.prepare(query).bind(limit, offset).all();
 
             return new Response(JSON.stringify(results), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -329,6 +334,14 @@ export default {
     } catch (error) {
       console.error(error);
       return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    }
+  },
+
+  async scheduled(event, env, ctx) {
+    if (env.DB) {
+      ctx.waitUntil(
+        env.DB.prepare("DELETE FROM TelemetryLogs WHERE created_at < datetime('now', '-30 days')").run().catch(err => console.error("Telemetry cleanup error:", err))
+      );
     }
   }
 };

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import { generateScorecardImage } from '../utils/canvasExport';
 
-const { FiShare2, FiCheck, FiTwitter } = FiIcons;
+const { FiShare2, FiCheck, FiTwitter, FiDownload } = FiIcons;
 
 const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
   const [copied, setCopied] = useState(false);
@@ -68,11 +69,20 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
     }
   };
 
+  const handleDownload = () => {
+    const dataUrl = generateScorecardImage(guesses, targetWord, score, streak);
+    const link = document.createElement('a');
+    link.download = 'axim-cipher-result.png';
+    link.href = dataUrl;
+    link.click();
+  };
+
 
   const isViral = streak >= 7;
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-4">
       <button
         onClick={handleShare}
         className={`bg-transparent border-2 py-3 px-8 text-lg font-bold font-cyber transition-all flex items-center justify-center gap-2 ${
@@ -93,6 +103,14 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
       >
         <SafeIcon icon={FiTwitter} />
         Post to X
+      </button>
+      </div>
+      <button
+        onClick={handleDownload}
+        className="bg-transparent border-2 border-green-400 text-green-400 py-3 px-8 text-lg font-bold font-cyber transition-all flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(74,222,128,0.5)] hover:bg-green-400/10"
+      >
+        <SafeIcon icon={FiDownload} />
+        Download Image
       </button>
     </div>
   );
