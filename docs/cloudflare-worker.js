@@ -91,6 +91,35 @@ export default {
         });
       }
 
+      if (path === '/api/admin/telemetry' && request.method === 'GET') {
+        const authHeader = request.headers.get('Authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null;
+
+        if (!token || token !== env.ADMIN_SECRET_KEY) {
+          return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+        }
+
+        try {
+          if (env.DB) {
+            // Get the last 1000 events
+            const query = "SELECT * FROM TelemetryLogs ORDER BY created_at DESC LIMIT 1000";
+            const { results } = await env.DB.prepare(query).all();
+
+            return new Response(JSON.stringify(results), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            return new Response(JSON.stringify({ error: 'Database not available' }), { status: 500, headers: corsHeaders });
+          }
+        } catch (dbError) {
+          console.error("DB Error", dbError);
+          return new Response(JSON.stringify({ error: 'Database error' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       if (path === '/api/hint/today' && request.method === 'GET') {
         // RATE LIMITING
         const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
