@@ -69,6 +69,8 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
   };
 
 
+  const isViral = streak >= 7;
+
   return (
     <div className="flex gap-4">
       <button
@@ -76,7 +78,9 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
         className={`bg-transparent border-2 py-3 px-8 text-lg font-bold font-cyber transition-all flex items-center justify-center gap-2 ${
           copied
             ? 'border-neon-green text-neon-green shadow-neon-green bg-neon-green/10'
-            : 'border-neon-pink text-neon-pink shadow-neon-pink hover:bg-neon-pink/10'
+            : isViral
+              ? 'border-neon-green text-neon-green hover:bg-neon-green/10 shadow-[0_0_15px_#39ff14] animate-pulse'
+              : 'border-neon-pink text-neon-pink shadow-neon-pink hover:bg-neon-pink/10'
         }`}
       >
         <SafeIcon icon={copied ? FiCheck : FiShare2} />

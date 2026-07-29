@@ -56,33 +56,34 @@ export default {
 
     try {
       if (path === '/api/telemetry' && request.method === 'POST') {
-        try {
-          const body = await request.json();
-          if (env.ANALYTICS) {
-            env.ANALYTICS.writeDataPoint({
-              blobs: [
-                body.eventName || 'UNKNOWN',
-                JSON.stringify(body.payload || {})
-              ],
-              doubles: [
-                Date.now()
-              ],
-              indexes: [
-                (body.eventName || 'UNKNOWN').substring(0, 32)
-              ]
-            });
-          } else if (env.DB) {
-            // Fallback to D1 TelemetryLogs
-            const query = "INSERT INTO TelemetryLogs (event_name, payload, timestamp) VALUES (?, ?, ?)";
-            await env.DB.prepare(query).bind(
-              body.eventName || 'UNKNOWN',
-              JSON.stringify(body.payload || {}),
-              Date.now()
-            ).run();
+        const processTelemetry = async () => {
+          try {
+            // Read body text first in case it's not JSON
+            const reqBody = await request.clone().json();
+
+            if (env.DB) {
+              const eventType = reqBody.eventName || reqBody.event_type || 'UNKNOWN';
+              const walletAddress = reqBody.payload?.walletAddress || reqBody.wallet_address || null;
+              const metadata = JSON.stringify(reqBody.payload || reqBody.metadata || {});
+              const createdAt = Date.now();
+
+              const query = "INSERT INTO TelemetryLogs (event_type, wallet_address, metadata, created_at) VALUES (?, ?, ?, ?)";
+              await env.DB.prepare(query).bind(
+                eventType,
+                walletAddress,
+                metadata,
+                createdAt
+              ).run();
+            }
+          } catch (telemetryError) {
+            console.error("Telemetry error", telemetryError);
           }
-        } catch (telemetryError) {
-          console.error("Telemetry error", telemetryError);
-          // Fail silently for telemetry
+        };
+
+        if (ctx && ctx.waitUntil) {
+          ctx.waitUntil(processTelemetry());
+        } else {
+          await processTelemetry();
         }
 
         return new Response(JSON.stringify({ status: 'success' }), {
