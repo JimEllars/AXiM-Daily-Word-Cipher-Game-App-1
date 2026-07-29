@@ -29,6 +29,29 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
       return;
     }
 
+    // Contract Pause Circuit Breaker (Sprint 24)
+    if (window.ethereum) {
+      try {
+        const pauseCheckResponse = await window.ethereum.request({
+          method: 'eth_call',
+          params: [{
+            to: WEB3_CONFIG.CONTRACT_ADDRESS,
+            data: '0x5c975abb' // paused()
+          }, 'latest']
+        });
+
+        if (pauseCheckResponse === '0x0000000000000000000000000000000000000000000000000000000000000001') {
+          trackEvent('MINT_BLOCKED_CONTRACT_PAUSED', { contract: WEB3_CONFIG.CONTRACT_ADDRESS });
+          setErrorMessage("[ NETWORK MINTING TEMPORARILY SUSPENDED - CHECK BACK LATER ]");
+          setStatus('error');
+          return;
+        }
+      } catch (pauseError) {
+        console.warn("Failed to check contract pause state, falling back to gas estimation", pauseError);
+        // Fallback: If read fails (e.g., RPC timeout), proceed to gas check
+      }
+    }
+
     // Gas Fee Circuit Breaker & Fallback
     let fallbackGasLimit = null;
     try {
