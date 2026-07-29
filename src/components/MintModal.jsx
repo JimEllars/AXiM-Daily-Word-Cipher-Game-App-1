@@ -28,6 +28,25 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
       return;
     }
 
+    // Gas Fee Circuit Breaker
+    try {
+      if (window.ethereum) {
+        const gasPriceHex = await window.ethereum.request({ method: 'eth_gasPrice' });
+        const gasPrice = parseInt(gasPriceHex, 16);
+        // 0.1 gwei = 100000000 wei
+        const threshold = 100000000;
+
+        if (gasPrice > threshold) {
+          trackEvent('MINT_BLOCKED_HIGH_GAS', { gasPrice: gasPrice });
+          setErrorMessage("[ NETWORK CONGESTED - GAS FEES TOO HIGH - PLEASE WAIT ]");
+          setStatus('error');
+          return;
+        }
+      }
+    } catch (gasError) {
+      console.warn("Failed to fetch gas price", gasError);
+    }
+
     setStatus('processing');
     const startTime = performance.now();
 
