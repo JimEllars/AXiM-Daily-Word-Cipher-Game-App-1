@@ -234,10 +234,42 @@ export default {
       }
 
       if (path === '/api/word/today' && request.method === 'GET') {
-        const dayId = Math.floor(Date.now() / 86400000);
-        const word = await getWordForToday(env, dayId);
-        return new Response(JSON.stringify({ word }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        const cache = caches.default;
+        const now = new Date();
+        const dateString = now.toISOString().split('T')[0];
+        const cacheUrl = new URL(request.url);
+        cacheUrl.searchParams.set('date', dateString);
+        const cacheKey = new Request(cacheUrl.toString(), request);
+
+        let response = await cache.match(cacheKey);
+
+        if (!response) {
+          const dayId = Math.floor(Date.now() / 86400000);
+          const word = await getWordForToday(env, dayId);
+
+          const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+          const secondsUntilMidnight = Math.floor((nextMidnight.getTime() - now.getTime()) / 1000);
+
+          response = new Response(JSON.stringify({ word }), {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Cache-Control': `s-maxage=${secondsUntilMidnight}`
+            }
+          });
+
+          ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        }
+
+        const responseHeaders = new Headers(response.headers);
+        for (const [key, value] of Object.entries(corsHeaders)) {
+          responseHeaders.set(key, value);
+        }
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders
         });
       }
 

@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import { generateScorecardImage } from '../utils/canvasExport';
+import { useTelemetry } from '../hooks/useTelemetry';
 
 const { FiShare2, FiCheck, FiTwitter, FiDownload } = FiIcons;
 
 const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
   const [copied, setCopied] = useState(false);
+  const [copiedInstead, setCopiedInstead] = useState(false);
+  const { trackEvent } = useTelemetry();
 
 
   const generateShareText = () => {
@@ -69,12 +72,27 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
     }
   };
 
-  const handleDownload = () => {
-    const dataUrl = generateScorecardImage(guesses, targetWord, score, streak);
-    const link = document.createElement('a');
-    link.download = 'axim-cipher-result.png';
-    link.href = dataUrl;
-    link.click();
+  const handleDownload = async () => {
+    try {
+      const dataUrl = generateScorecardImage(guesses, targetWord, score, streak);
+      const link = document.createElement('a');
+      link.download = 'axim-cipher-result.png';
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.warn("Canvas export failed, falling back to clipboard copy", err);
+      trackEvent('CANVAS_EXPORT_FAILED', { error: err.message });
+
+      // Fallback to ASCII clipboard copy
+      const textToShare = generateShareText();
+      try {
+        await navigator.clipboard.writeText(textToShare);
+        setCopiedInstead(true);
+        setTimeout(() => setCopiedInstead(false), 3000);
+      } catch (copyErr) {
+        console.error('Fallback copy failed', copyErr);
+      }
+    }
   };
 
 
@@ -109,8 +127,8 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
         onClick={handleDownload}
         className="bg-transparent border-2 border-green-400 text-green-400 py-3 px-8 text-lg font-bold font-cyber transition-all flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(74,222,128,0.5)] hover:bg-green-400/10"
       >
-        <SafeIcon icon={FiDownload} />
-        Download Image
+        <SafeIcon icon={copiedInstead ? FiCheck : FiDownload} />
+        {copiedInstead ? "[ COPIED TO CLIPBOARD INSTEAD ]" : "Download Image"}
       </button>
     </div>
   );
