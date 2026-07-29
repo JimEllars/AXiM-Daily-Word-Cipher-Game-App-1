@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import TurnstileWidget from './TurnstileWidget';
+import confetti from 'canvas-confetti';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { WEB3_CONFIG } from '../config/web3';
 
@@ -28,7 +29,8 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
       return;
     }
 
-    // Gas Fee Circuit Breaker
+    // Gas Fee Circuit Breaker & Fallback
+    let fallbackGasLimit = null;
     try {
       if (window.ethereum) {
         const gasPriceHex = await window.ethereum.request({ method: 'eth_gasPrice' });
@@ -44,7 +46,10 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
         }
       }
     } catch (gasError) {
-      console.warn("Failed to fetch gas price", gasError);
+      console.warn("Failed to fetch gas price, applying fallback", gasError);
+      trackEvent('GAS_ORACLE_TIMEOUT', { error: gasError.message });
+      // Apply a safe fallback limit, padding normal transaction limit (e.g. 21000) by 30%
+      fallbackGasLimit = '0x' + Math.floor(21000 * 1.3).toString(16);
     }
 
     setStatus('processing');
@@ -121,6 +126,7 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
                   to: walletAddress, // Send to self as a dummy action for the demo
                   value: '0x0',
                   data: '0x', // Dummy data
+                  ...(fallbackGasLimit ? { gas: fallbackGasLimit } : {})
                 },
               ],
             });
@@ -151,6 +157,32 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
 
           trackEvent('MINT_TRANSACTION_CONFIRMED', { txHash: txResponse });
           setStatus('success');
+
+          // Trigger confetti burst
+          const duration = 3000;
+          const end = Date.now() + duration;
+          const colors = ['#ff007f', '#00ff66', '#1a1a26']; // AXiM colors
+
+          (function frame() {
+            confetti({
+              particleCount: 5,
+              angle: 60,
+              spread: 55,
+              origin: { x: 0 },
+              colors: colors
+            });
+            confetti({
+              particleCount: 5,
+              angle: 120,
+              spread: 55,
+              origin: { x: 1 },
+              colors: colors
+            });
+
+            if (Date.now() < end) {
+              requestAnimationFrame(frame);
+            }
+          }());
 
           const todayId = Math.floor(Date.now() / 86400000).toString();
           localStorage.setItem('axim_last_minted_day_id', todayId);
