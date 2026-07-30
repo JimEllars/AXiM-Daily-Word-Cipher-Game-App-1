@@ -19,7 +19,7 @@ const Leaderboard = ({ isOpen, onClose, dict, walletAddress }) => {
       const startTime = performance.now();
 
       try {
-        const response = await fetch(`/api/leaderboard?type=${tab}`);
+        const response = await fetch(`${import.meta.env.BASE_URL}api/leaderboard?type=${tab}`);
         if (!response.ok) {
           throw new Error('Database offline');
         }

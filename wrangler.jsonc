@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "axim-daily-word-cipher",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-29",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "axim.us.com/games/daily-word-cipher*",
+      "zone_name": "axim.us.com"
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/games/daily-word-cipher*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "axim-daily-word-cipher-db",
+      "database_id": "03b9329b-0b18-4b84-b3ec-ead5596fca71",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

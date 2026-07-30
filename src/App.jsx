@@ -5,7 +5,6 @@ import GameBoard from './components/GameBoard';
 import GameInput from './components/GameInput';
 import Keyboard from './components/Keyboard';
 import BadgesPanel from './components/BadgesPanel';
-import MintModal from './components/MintModal';
 import Leaderboard from './components/Leaderboard';
 import Instructions from './components/Instructions';
 import WalletButton from './components/WalletButton';
@@ -26,7 +25,6 @@ const { FiBarChart2, FiInfo } = FiIcons;
 function App() {
   const { trackEvent } = useTelemetry();
   const [language, setLanguage] = useState('en');
-  const [showMintModal, setShowMintModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [walletAddress, setWalletAddress] = useState(null);
@@ -101,7 +99,7 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ignore if game over or any modal is open
-      if (gameOver || showMintModal || showLeaderboard || showInstructions) return;
+      if (gameOver || showLeaderboard || showInstructions) return;
       if (e.repeat) return; // Prevent holding down key spam
 
       const key = e.key;
@@ -120,7 +118,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameOver, showMintModal, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess]);
+  }, [gameOver, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess]);
 
   return (
     <CRTOverlay>
@@ -214,19 +212,9 @@ function App() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="flex gap-4 mt-6"
             >
-              {!showMintModal && !hasMintedToday && (
-                <button
-                  onClick={() => setShowMintModal(true)}
-                  className="bg-neon-pink text-white border-2 border-neon-pink py-3 px-8 text-lg font-bold font-cyber shadow-neon-pink hover:bg-transparent hover:text-neon-pink transition-all"
-                >
-                  {dict.mintBtn}
-                </button>
-              )}
-              {hasMintedToday && (
-                <div className="flex items-center justify-center px-4 py-2 border-2 border-neon-green/50 opacity-50 text-neon-green font-bold text-center">
-                  [ TOKENS SECURED FOR CYCLE ]
-                </div>
-              )}
+              <div className="flex items-center justify-center px-4 py-2 border-2 border-neon-pink/50 text-neon-pink font-bold text-center">
+                [ TOKEN REWARDS ACTIVATING SOON ]
+              </div>
               <ShareButton
                 dict={dict}
                 guesses={guesses}
@@ -257,19 +245,6 @@ function App() {
           dict={dict} 
         />
 
-        {showMintModal && (
-          <ErrorBoundary>
-          <MintModal 
-            score={score} 
-            time_elapsed={elapsedSeconds}
-            walletAddress={walletAddress}
-            dictionary={dict}
-          currentAttempts={hasWon ? guesses.length : null}
-            onClose={() => setShowMintModal(false)}
-            setHasMintedToday={setHasMintedToday}
-          />
-          </ErrorBoundary>
-        )}
       </div>
     </CRTOverlay>
   );

@@ -155,7 +155,7 @@ export const useGameEngine = (walletAddress) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        const response = await fetch('/api/word/today', { signal: controller.signal });
+        const response = await fetch(`${import.meta.env.BASE_URL}api/word/today`, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         if (!response.ok) {
