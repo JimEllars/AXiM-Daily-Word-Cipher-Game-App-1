@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GameBoard = ({ guesses, currentGuess, targetWord }) => {
+const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver }) => {
   const [hint, setHint] = useState(null);
   const [displayedHint, setDisplayedHint] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -175,31 +175,49 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
         ))}
 
         {/* Current active row (only if not won/lost yet) */}
+        {!gameOver && (
         <div className="flex gap-2">
           {Array.from({ length: WORD_LENGTH }).map((_, colIdx) => {
             const letter = currentGuess[colIdx] || '';
             return renderTile(letter, null, colIdx);
           })}
         </div>
+        )}
       </div>
 
-      <AnimatePresence>
-        {guesses.length >= 4 && !hint && !isHintLoading && !hintError && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="mb-6"
-          >
-            <button
+            <div className="mb-6 flex gap-4">
+        <AnimatePresence>
+          {guesses.length >= 4 && !hint && !isHintLoading && !hintError && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               onClick={fetchHint}
               className="py-2 px-4 border-2 border-yellow-400 text-yellow-400 font-cyber text-sm font-bold shadow-[0_0_10px_rgba(250,204,21,0.5),_0_0_20px_rgba(250,204,21,0.3)] hover:bg-yellow-400 hover:text-black transition-all"
             >
               [ REQUEST AI DECRYPTION HINT ]
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {!gameOver && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (window.confirm("Are you sure? You will receive 25 participation points.")) {
+                  onForfeit();
+                }
+              }}
+              className="py-2 px-4 border-2 border-red-500 text-red-500 font-cyber text-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5),_0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500 hover:text-white transition-all"
+            >
+              [ FORFEIT & REVEAL CIPHER ]
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {isHintLoading && (

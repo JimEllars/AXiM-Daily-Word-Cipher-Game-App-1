@@ -4,17 +4,26 @@ import { FALLBACK_WORDS, getDailyWord } from '../constants/words';
 import { ethers } from 'ethers';
 import { WEB3_CONFIG } from '../config/web3';
 
-const MAX_SCORE = 5000;
+const MAX_SCORE = 1000;
 const WORD_LENGTH = 5;
 
 const calculateScore = (attempts) => {
-  if (attempts === 0) return 5000;
-  if (attempts === 1) return 5000;
-  if (attempts === 2) return 3000;
-  if (attempts === 3) return 2000;
-  if (attempts === 4) return 1000;
-  if (attempts === 5) return 500;
-  return 100;
+  if (attempts <= 1) return 1000;
+
+  let score = 1000;
+  for (let i = 2; i <= attempts; i++) {
+    if (score >= 700) {
+      score -= 100;
+    } else if (score >= 500) {
+      score -= 75;
+    } else if (score >= 250) {
+      score -= 50;
+    } else {
+      score -= 25;
+    }
+  }
+
+  return Math.max(score, 25);
 };
 
 export const useGameEngine = (walletAddress) => {
@@ -38,9 +47,9 @@ export const useGameEngine = (walletAddress) => {
 
   const [currentGuess, setCurrentGuess] = useState('');
 
-  // Elapsed time is kept for badges, but timer is deprecated. We can just use elapsedSeconds = 0 or remove it.
-  // Wait, the prompt says "remove all setInterval logic related to the game clock". I'll keep elapsedSeconds = 0 so stats panel doesn't crash if it expects it.
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+
+
 
   const [gameOver, setGameOver] = useState(false);
   const [hasWon, setHasWon] = useState(false);
@@ -277,12 +286,6 @@ export const useGameEngine = (walletAddress) => {
       localStorage.setItem('axim_streak', newStreak);
       localStorage.setItem('axim_last_played', new Date().toDateString());
       
-      // Update guess distribution
-      const dist = JSON.parse(localStorage.getItem('axim_guess_distribution')) || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, "6+": 0 };
-      const attempts = newGuesses.length;
-      const bucket = attempts >= 6 ? "6+" : attempts.toString();
-      dist[bucket] = (dist[bucket] || 0) + 1;
-      localStorage.setItem('axim_guess_distribution', JSON.stringify(dist));
 
       evaluateBadges(newGuesses.length, 0, newStreak);
       trackEvent('GAME_COMPLETED', {
@@ -298,6 +301,27 @@ export const useGameEngine = (walletAddress) => {
     return true;
   }, [gameOver, guesses, targetWord, streak, score, trackEvent]);
 
+
+  const forfeitGame = useCallback(() => {
+    if (gameOver) return;
+
+    const newScore = 25; // guaranteed 25 points
+    setScore(newScore);
+    setGameOver(true);
+    setHasWon(false);
+
+    localStorage.removeItem('axim_current_session');
+    localStorage.setItem('axim_last_played', new Date().toDateString());
+
+    trackEvent('GAME_COMPLETED', {
+      hasWon: false,
+      score: newScore,
+      streak: streak,
+      time_elapsed: 0,
+      forfeit: true
+    });
+  }, [gameOver, streak, trackEvent]);
+
   const evaluateBadges = (attempts, time, currentStreak) => {
     const newBadges = ['genesis'];
     if (time < 30) newBadges.push('speed_demon'); // this might never trigger if time is always 0 now, but keeping for legacy
@@ -306,15 +330,15 @@ export const useGameEngine = (walletAddress) => {
     setUnlockedBadges(newBadges);
   };
 
-  return {
+    return {
     guesses,
     currentGuess,
     setCurrentGuess,
-    elapsedSeconds,
     score,
     gameOver,
     hasWon,
     submitGuess,
+    forfeitGame,
     unlockedBadges,
     streak,
     targetWord,
