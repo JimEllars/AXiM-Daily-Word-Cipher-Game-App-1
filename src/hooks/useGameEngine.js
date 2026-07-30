@@ -8,7 +8,7 @@ const MAX_SCORE = 5000;
 const WORD_LENGTH = 5;
 
 const calculateScore = (attempts) => {
-  if (attempts === 0) return MAX_SCORE;
+  if (attempts === 0) return 5000;
   if (attempts === 1) return 5000;
   if (attempts === 2) return 3000;
   if (attempts === 3) return 2000;
