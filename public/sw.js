@@ -1,9 +1,10 @@
 const CACHE_NAME = 'axim-static-cache-v1';
+const APP_PREFIX = '/games/daily-word-cipher';
 
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  `${APP_PREFIX}/`,
+  `${APP_PREFIX}/index.html`,
+  `${APP_PREFIX}/manifest.json`
 ];
 
 self.addEventListener('install', (event) => {
@@ -18,7 +19,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Critical Guardrail: Do NOT cache the /api/ Cloudflare Worker routes
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith(`${APP_PREFIX}/api/`)) {
     return;
   }
 

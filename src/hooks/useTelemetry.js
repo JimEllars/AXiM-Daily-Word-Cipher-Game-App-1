@@ -10,7 +10,7 @@ export const useTelemetry = () => {
 
       for (const item of queue) {
         try {
-          const res = await fetch('/api/telemetry', {
+          const res = await fetch(`${import.meta.env.BASE_URL}api/telemetry`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export const useTelemetry = () => {
           throw new Error('Offline');
         }
 
-        const res = await fetch('/api/telemetry', {
+        const res = await fetch(`${import.meta.env.BASE_URL}api/telemetry`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

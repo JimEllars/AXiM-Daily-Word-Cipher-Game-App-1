@@ -8,7 +8,9 @@
     "build": "npm run lint && vite build",
     "lint": "eslint .",
     "lint:error": "eslint . --quiet",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cf:types": "wrangler types",
+    "cf:deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@questlabs/react-sdk": "^2.2.92",
@@ -35,6 +37,7 @@
     "globals": "^15.9.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "vite": "^5.4.2"
+    "vite": "^5.4.2",
+    "wrangler": "^4.115.0"
   }
 }
