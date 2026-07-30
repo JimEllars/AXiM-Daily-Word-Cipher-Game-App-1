@@ -9,8 +9,16 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
   const [hintError, setHintError] = useState(false);
 
   const turnstileContainerRef = useRef(null);
+  const boardRef = useRef(null);
   const [turnstileToken, setTurnstileToken] = useState(null);
   const [isTurnstileRequired, setIsTurnstileRequired] = useState(false);
+
+
+  useEffect(() => {
+    if (boardRef.current) {
+      boardRef.current.scrollTop = boardRef.current.scrollHeight;
+    }
+  }, [guesses]);
 
   useEffect(() => {
     if (isTurnstileRequired && !window.turnstileScriptLoaded) {
@@ -157,7 +165,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="grid gap-2 mb-8">
+      <div ref={boardRef} className="grid gap-2 mb-8 overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ maxHeight: "50vh", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {guesses.map((guess, rowIdx) => (
           <div key={`row-${rowIdx}`} className="flex gap-2">
             {guess.split('').map((letter, colIdx) =>
@@ -167,7 +175,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord }) => {
         ))}
 
         {/* Current active row (only if not won/lost yet) */}
-        <div className={`flex gap-2 ${guesses.length === 5 ? 'animate-pulse-red rounded-sm border border-transparent' : ''}`}>
+        <div className="flex gap-2">
           {Array.from({ length: WORD_LENGTH }).map((_, colIdx) => {
             const letter = currentGuess[colIdx] || '';
             return renderTile(letter, null, colIdx);
