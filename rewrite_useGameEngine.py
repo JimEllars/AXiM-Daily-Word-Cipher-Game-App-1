@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import sys
+
+content = """import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTelemetry } from './useTelemetry';
 import { FALLBACK_WORDS, getDailyWord } from '../constants/words';
 import { ethers } from 'ethers';
@@ -221,7 +223,7 @@ export const useGameEngine = (walletAddress) => {
     const savedStreak = localStorage.getItem('axim_streak');
     const lastPlayed = localStorage.getItem('axim_last_played');
     const today = new Date().toDateString();
-    
+
     setStreak(savedStreak ? parseInt(savedStreak) : 3);
   }, []);
 
@@ -247,7 +249,7 @@ export const useGameEngine = (walletAddress) => {
            hasLegacyScore = true;
            accumulatedSeconds = parsed.accumulatedSeconds;
         }
-      } catch(e){ console.error(e); }
+      } catch(e){}
     }
 
     if (!hasLegacyScore) {
@@ -271,12 +273,12 @@ export const useGameEngine = (walletAddress) => {
       setGameOver(true);
       setHasWon(true);
       localStorage.removeItem('axim_current_session');
-      
+
       const newStreak = streak + 1;
       setStreak(newStreak);
       localStorage.setItem('axim_streak', newStreak);
       localStorage.setItem('axim_last_played', new Date().toDateString());
-      
+
       // Update guess distribution
       const dist = JSON.parse(localStorage.getItem('axim_guess_distribution')) || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, "6+": 0 };
       const attempts = newGuesses.length;
@@ -294,7 +296,7 @@ export const useGameEngine = (walletAddress) => {
 
     }
     // We removed the hard fail state (newScore === 0) since there are unlimited attempts.
-    
+
     return true;
   }, [gameOver, guesses, targetWord, streak, score, trackEvent]);
 
@@ -322,3 +324,7 @@ export const useGameEngine = (walletAddress) => {
     setHasMintedToday
   };
 };
+"""
+
+with open('src/hooks/useGameEngine.js', 'w') as f:
+    f.write(content)
