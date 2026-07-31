@@ -27,17 +27,7 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
       emojiBoard += '\n';
     });
 
-    let distributionText = '';
-    const dist = JSON.parse(localStorage.getItem('axim_guess_distribution'));
-    if (dist) {
-      distributionText = '\nStats:\n';
-      ["1", "2", "3", "4", "5", "6+"].forEach(key => {
-        const count = dist[key] || 0;
-        distributionText += `${key}: ${'🟩'.repeat(count)}\n`;
-      });
-    }
-
-    return `AXiM Cipher Decrypted! 🔓\nScore: ${score} | Streak: ${streak}🔥\n${emojiBoard}${distributionText}\nPlay at axim.us.com`;
+    return `AXiM Cipher Decrypted! 🔓\nScore: ${score} | Streak: ${streak}🔥\n${emojiBoard}\nPlay at axim.us.com`;
   };
 
 

@@ -38,11 +38,11 @@ function App() {
     guesses,
     currentGuess,
     setCurrentGuess,
-    elapsedSeconds,
     score,
     gameOver,
     hasWon,
     submitGuess,
+    forfeitGame,
     unlockedBadges,
     streak,
     hasMintedToday,
@@ -150,12 +150,10 @@ function App() {
           </div>
         </div>
 
-        <StatsPanel 
-          score={score} 
-          streak={streak} 
-          time={elapsedSeconds} 
+        <StatsPanel
+          score={score}
+          streak={streak}
           dictionary={dict}
-          currentAttempts={hasWon ? guesses.length : null}
         />
 
         <AnimatePresence>
@@ -168,6 +166,7 @@ function App() {
             >
               {hasWon ? dict.winMsg : dict.loseMsg}
               {hasWon && <div className="text-xs mt-1 text-white opacity-80">Final Signal Verified</div>}
+              {!hasWon && <div className="text-xs mt-1 text-white opacity-80">Cipher was: {targetWord}</div>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -177,6 +176,8 @@ function App() {
           guesses={guesses} 
           currentGuess={currentGuess} 
           targetWord={targetWord} 
+          onForfeit={forfeitGame}
+          gameOver={gameOver}
         />
         </ErrorBoundary>
 
@@ -185,7 +186,7 @@ function App() {
           setCurrentGuess={setCurrentGuess}
           submitGuess={submitGuess}
           dictionary={dict}
-          currentAttempts={hasWon ? guesses.length : null}
+
           disabled={gameOver}
         />
 
