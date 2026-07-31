@@ -8,6 +8,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver }) =
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [hintError, setHintError] = useState(false);
 
+  const [showForfeitModal, setShowForfeitModal] = useState(false);
   const turnstileContainerRef = useRef(null);
   const boardRef = useRef(null);
   const [turnstileToken, setTurnstileToken] = useState(null);
@@ -206,11 +207,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver }) =
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              onClick={() => {
-                if (window.confirm("Are you sure? You will receive 25 participation points.")) {
-                  onForfeit();
-                }
-              }}
+              onClick={() => setShowForfeitModal(true)}
               className="py-2 px-4 border-2 border-red-500 text-red-500 font-cyber text-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5),_0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500 hover:text-white transition-all"
             >
               [ FORFEIT & REVEAL CIPHER ]
@@ -255,6 +252,48 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver }) =
             className="mb-6 text-red-500 font-cyber text-xs"
           >
             [ AI LINK SEVERED - RETRY ]
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showForfeitModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-black border-2 border-red-500 p-6 max-w-sm w-full mx-4 shadow-[0_0_30px_rgba(239,68,68,0.3)] text-center"
+            >
+              <div className="text-red-500 font-cyber text-lg mb-4 animate-pulse">
+                [ SYSTEM WARNING ]
+              </div>
+              <p className="text-white font-mono text-sm mb-8">
+                ABORT DECRYPTION? You will receive 25 participation points.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => setShowForfeitModal(false)}
+                  className="py-2 px-4 border border-gray-500 text-gray-300 font-cyber text-sm hover:bg-gray-800 transition-all"
+                >
+                  [ CANCEL ]
+                </button>
+                <button
+                  onClick={() => {
+                    setShowForfeitModal(false);
+                    onForfeit();
+                  }}
+                  className="py-2 px-4 bg-red-500 text-black font-cyber text-sm font-bold hover:bg-red-400 transition-all shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+                >
+                  [ CONFIRM ABORT ]
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
