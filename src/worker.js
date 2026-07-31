@@ -92,6 +92,30 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     return json({ status: "accepted" }, { status: 202 });
   }
 
+  if (pathname === "/api/user/sync" && request.method === "POST") {
+    try {
+      const data = await request.json();
+      const { wallet_address, score, streak } = data;
+
+      if (!wallet_address) {
+        return json({ error: "Missing wallet_address" }, { status: 400 });
+      }
+
+      const existing = await env.DB.prepare(
+        "SELECT * FROM UserStates WHERE wallet_address = ?"
+      ).bind(wallet_address).first();
+
+      await env.DB.prepare(
+        "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played) VALUES (?, ?, ?, ?)"
+      ).bind(wallet_address, score || (existing ? existing.score : 0), streak || (existing ? existing.streak : 0), Date.now()).run();
+
+      return json({ status: "success" });
+    } catch (error) {
+      console.error(error);
+      return json({ error: "Database operation failed" }, { status: 500 });
+    }
+  }
+
   if (pathname === "/api/leaderboard" && request.method === "GET") {
     const type = new URL(request.url).searchParams.get("type");
     if (!["daily", "weekly", "allTime"].includes(type)) {

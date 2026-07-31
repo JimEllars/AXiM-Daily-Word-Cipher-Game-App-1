@@ -23,7 +23,7 @@ const calculateScore = (attempts) => {
     }
   }
 
-  return Math.max(score, 25);
+  return Math.max(25, score);
 };
 
 export const useGameEngine = (walletAddress) => {
@@ -309,6 +309,7 @@ export const useGameEngine = (walletAddress) => {
     setScore(newScore);
     setGameOver(true);
     setHasWon(false);
+    setGuesses(prev => [...prev, targetWord]);
 
     localStorage.removeItem('axim_current_session');
     localStorage.setItem('axim_last_played', new Date().toDateString());
@@ -320,7 +321,7 @@ export const useGameEngine = (walletAddress) => {
       time_elapsed: 0,
       forfeit: true
     });
-  }, [gameOver, streak, trackEvent]);
+  }, [gameOver, streak, trackEvent, targetWord]);
 
   const evaluateBadges = (attempts, time, currentStreak) => {
     const newBadges = ['genesis'];
