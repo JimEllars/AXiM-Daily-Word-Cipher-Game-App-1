@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, startPracticeGame }) => {
+const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, startPracticeGame, isPracticeMode, skipPracticeWord, isWiping }) => {
   const [hint, setHint] = useState(null);
   const [displayedHint, setDisplayedHint] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -166,7 +166,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
 
   return (
     <div className="flex flex-col items-center">
-      <div ref={boardRef} className="grid gap-2 mb-8 overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ maxHeight: "50vh", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+      <div ref={boardRef} className={`grid gap-2 mb-8 overflow-y-auto [&::-webkit-scrollbar]:hidden ${isWiping ? 'animate-terminal-wipe' : ''}`} style={{ maxHeight: "50vh", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {guesses.map((guess, rowIdx) => (
           <div key={`row-${rowIdx}`} className="flex gap-2">
             {guess.split('').map((letter, colIdx) =>
@@ -202,7 +202,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
         </AnimatePresence>
 
         <AnimatePresence>
-          {!gameOver && (
+          {!gameOver && !isPracticeMode && (
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -211,6 +211,20 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
               className="py-2 px-4 border-2 border-red-500 text-red-500 font-cyber text-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5),_0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500 hover:text-white transition-all"
             >
               [ FORFEIT & REVEAL CIPHER ]
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {!gameOver && isPracticeMode && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              onClick={skipPracticeWord}
+              className="py-2 px-4 border-2 border-yellow-500 text-yellow-500 font-cyber text-sm font-bold shadow-[0_0_10px_rgba(234,179,8,0.5),_0_0_20px_rgba(234,179,8,0.3)] hover:bg-yellow-500 hover:text-black transition-all"
+            >
+              [ SKIP CIPHER ]
             </motion.button>
           )}
         </AnimatePresence>

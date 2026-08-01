@@ -48,7 +48,10 @@ function App() {
     hasMintedToday,
     setHasMintedToday,
     isPracticeMode,
-    startPracticeGame
+    startPracticeGame,
+    lifetimePracticeScore,
+    isWiping,
+    skipPracticeWord
   } = useGameEngine(walletAddress);
 
 

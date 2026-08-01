@@ -1,16 +1,16 @@
-Sprint #32 - Practice Mode Implementation
-
-Modified files:
-- src/constants/words.js
-- src/hooks/useGameEngine.js
-- src/components/Header.jsx
-- src/components/GameBoard.jsx
-- src/App.jsx
-
-Changes:
-1. Added `getRandomPracticeWord` to filter out current daily words and bypass UTC seeding for random replays.
-2. Introduced `isPracticeMode` state to `useGameEngine`.
-3. Created `startPracticeGame` to reset guesses and toggle the practice state.
-4. Bypassed `localStorage` read/writes for `axim_current_session`, `axim_streak`, and `axim_last_played` when `isPracticeMode` is active.
-5. Implemented a subtle neon-yellow `[ PRACTICE MODE ]` badge in the header.
-6. Added a `[ PLAY AGAIN ]` button to the `GameBoard` post-game state (revealed on win/forfeit).
+b21e3bf feat: add practice score migration
+e590ff3 feat: practice mode lifetime score, skip mechanic, and decoupled telemetry
+fece248 Merge pull request #21 from JimEllars/feature/sprint-32-practice-mode-757449179903847836
+This patch implements the following features for Sprint #33:
+1. Practice Mode Lifetime Score:
+   - Updated `calculateScore` in `useGameEngine.js` to reward points in practice mode (100 max, -20 per attempt, 10 min).
+   - Added `lifetimePracticeScore` state and synced it via `localStorage` and `worker.js` POST `/api/user/sync`.
+   - Safely falls back if `lifetime_practice_score` DB column doesn't exist.
+   - Added the explicit DB migration file `migrations/0002_add_practice_score.sql`.
+2. Skip Mechanic & Terminal Wipe:
+   - Added `isWiping` state to trigger the newly added CSS keyframe `terminal-wipe` from `tailwind.config.js`.
+   - Plumbed `skipPracticeWord` and `isWiping` into `App.jsx` -> `GameBoard.jsx`.
+   - Created the conditional `[ SKIP CIPHER ]` button in practice mode.
+3. Telemetry Event Separation:
+   - Refactored `useTelemetry.js` to optionally parse `practiceMode` flag and append `PRACTICE_` string.
+   - Pushed `practiceMode` onto all `trackEvent` hooks (Start, Submits, Skips, Completions).

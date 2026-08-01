@@ -47,6 +47,10 @@ export const useTelemetry = () => {
   }, [processQueue]);
 
   const trackEvent = useCallback((eventName, payload = {}) => {
+    if (payload.practiceMode) {
+      eventName = `PRACTICE_${eventName}`;
+    }
+
     console.log(`[AXiM Telemetry] ${eventName} | Data:`, JSON.stringify(payload));
 
     const eventPayload = { eventName, payload };
