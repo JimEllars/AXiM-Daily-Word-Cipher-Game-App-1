@@ -1,7 +1,7 @@
 import React from 'react';
 import LoginButton from './LoginButton';
 
-const Header = ({ language, setLanguage, isPracticeMode, dict, address, setAddress }) => {
+const Header = ({ dict, address, setAddress }) => {
   return (
     <header className="w-full bg-[#0d0d13] border-b border-gray-800 sticky top-0 z-40">
       <div className="w-full max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -20,35 +20,12 @@ const Header = ({ language, setLanguage, isPracticeMode, dict, address, setAddre
           </nav>
         </div>
 
-        {/* Right Side: Lang, Practice Mode Tag, Login */}
+        {/* Right Side: Login */}
         <div className="flex items-center gap-4">
-          {isPracticeMode && (
-            <span className="hidden sm:inline-block text-xs font-bold text-black bg-yellow-400 px-2 py-1 shadow-[0_0_10px_rgba(250,204,21,0.8)] font-cyber">
-              [ PRACTICE MODE ]
-            </span>
-          )}
-
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="hidden sm:block bg-surface-dark text-neon-green border border-gray-700 p-1 text-xs font-mono cursor-pointer outline-none hover:border-neon-green transition-colors"
-          >
-            <option value="en">EN</option>
-            <option value="es">ES</option>
-            <option value="fr">FR</option>
-          </select>
-
           <LoginButton dict={dict} address={address} setAddress={setAddress} />
         </div>
 
       </div>
-
-      {/* Mobile Practice Mode Banner (if needed below header) */}
-      {isPracticeMode && (
-        <div className="sm:hidden w-full bg-yellow-400 text-black text-xs font-bold font-cyber text-center py-1">
-          [ PRACTICE MODE ]
-        </div>
-      )}
     </header>
   );
 };

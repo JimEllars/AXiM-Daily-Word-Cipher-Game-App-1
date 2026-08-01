@@ -95,7 +95,11 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
   if (pathname === "/api/user/sync" && request.method === "POST") {
     try {
       const data = await request.json();
-      const { wallet_address, score, streak, lifetime_practice_score } = data;
+
+      // Explicitly ignore legacy time-based payload fields
+      const { time_elapsed, timer, ...sanitizedData } = data;
+
+      const { wallet_address, score, streak, lifetime_practice_score } = sanitizedData;
 
       if (!wallet_address) {
         return json({ error: "Missing wallet_address" }, { status: 400 });

@@ -128,11 +128,8 @@ function App() {
 
   return (
     <CRTOverlay>
-      <div className="w-full min-h-full flex flex-col items-center pb-4 flex-1 overflow-y-auto">
+      <div className="w-full min-h-full flex flex-col justify-between items-center pb-4 pb-[env(safe-area-inset-bottom)] flex-1 overflow-y-auto">
         <Header
-          language={language}
-          setLanguage={setLanguage}
-          isPracticeMode={isPracticeMode}
           dict={dict}
           address={walletAddress}
           setAddress={(addr) => {
@@ -226,10 +223,6 @@ function App() {
         />
         </div>
 
-        <div className="w-full mt-8 opacity-75">
-          <GuessDistribution dictionary={dict} />
-        </div>
-
         <AnimatePresence>
           {hasWon && (
             <motion.div
@@ -273,6 +266,9 @@ function App() {
           onClose={() => setShowInstructions(false)} 
           dict={dict} 
         />
+        <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
+          <GuessDistribution dictionary={dict} />
+        </div>
 </div>
     </CRTOverlay>
   );
