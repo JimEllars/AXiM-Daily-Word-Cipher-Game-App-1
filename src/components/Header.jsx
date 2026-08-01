@@ -8,15 +8,15 @@ const Header = ({ language, setLanguage, isPracticeMode, dict, address, setAddre
 
         {/* Left Side: Logo & Nav Links */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
+          <a href="https://axim.us.com/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="https://greta-preview.s3.us-east-2.amazonaws.com/assets/logo.svg" alt="AXiM Logo" className="h-8 w-8" />
             <span className="text-white font-bold text-xl tracking-wide hidden sm:block">AXiM</span>
-          </div>
+          </a>
 
           <nav className="hidden md:flex items-center gap-4 text-sm font-medium text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">Ecosystem</a>
-            <a href="#" className="hover:text-white transition-colors">Games</a>
-            <a href="#" className="hover:text-white transition-colors">Tokenomics</a>
+            <a href="https://axim.us.com/" className="hover:text-white transition-colors">Ecosystem</a>
+            <a href="https://axim.us.com/games/" className="hover:text-white transition-colors">Games</a>
+            <a href="https://axim.us.com/tokenomics/" className="hover:text-white transition-colors">Tokenomics</a>
           </nav>
         </div>
 

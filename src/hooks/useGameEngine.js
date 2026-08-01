@@ -42,6 +42,26 @@ export const useGameEngine = (walletAddress) => {
   const hasTrackedStart = useRef(false);
   const [targetWord, setTargetWord] = useState('');
   const [guesses, setGuesses] = useState(() => {
+    // Dynamic Session Synchronization check to ensure telemetry or initialization covers it
+    const checkGlobalSession = () => {
+      let sessionData = null;
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find(c => c.trim().startsWith('axim_global_session='));
+      if (sessionCookie) {
+        try {
+          const cookieVal = decodeURIComponent(sessionCookie.split('=')[1]);
+          sessionData = JSON.parse(cookieVal);
+        } catch (e) {
+          sessionData = sessionCookie.split('=')[1];
+        }
+      }
+      if (!sessionData) {
+        sessionData = localStorage.getItem('axim_global_session');
+      }
+      return sessionData;
+    };
+    checkGlobalSession();
+
     const session = !isPracticeMode ? localStorage.getItem('axim_current_session') : null;
     if (session) {
       try {

@@ -41,7 +41,7 @@ const Keyboard = ({ guesses, targetWord, onKeyPress }) => {
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto flex flex-col gap-2 p-2 mb-4">
+    <div className="w-full max-w-lg mx-auto flex flex-col gap-2 p-2 mb-2 pb-safe">
       {KEYBOARD_ROWS.map((row, rowIdx) => (
         <div key={rowIdx} className="flex justify-center gap-1 sm:gap-2">
           {row.map((key) => {

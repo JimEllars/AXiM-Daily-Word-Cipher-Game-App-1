@@ -165,8 +165,8 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div ref={boardRef} className={`grid gap-2 mb-8 overflow-y-auto [&::-webkit-scrollbar]:hidden ${isWiping ? 'animate-terminal-wipe' : ''}`} style={{ maxHeight: "50vh", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+    <div className="flex flex-col items-center h-full justify-center min-h-0 w-full">
+      <div ref={boardRef} className={`grid gap-2 mb-4 overflow-y-auto [&::-webkit-scrollbar]:hidden ${isWiping ? 'animate-terminal-wipe' : ''}`} style={{ maxHeight: "100%", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {guesses.map((guess, rowIdx) => (
           <div key={`row-${rowIdx}`} className="flex gap-2">
             {guess.split('').map((letter, colIdx) =>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,42 @@ const { FiCpu, FiLink, FiMail, FiUser } = FiIcons;
 const LoginButton = ({ dict, address, setAddress }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [globalUser, setGlobalUser] = useState(null);
+
+  useEffect(() => {
+    const checkGlobalSession = () => {
+      let sessionData = null;
+
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find(c => c.trim().startsWith('axim_global_session='));
+      if (sessionCookie) {
+        try {
+          const cookieVal = decodeURIComponent(sessionCookie.split('=')[1]);
+          sessionData = JSON.parse(cookieVal);
+        } catch (e) {
+          sessionData = sessionCookie.split('=')[1];
+        }
+      }
+
+      if (!sessionData) {
+        const localSession = localStorage.getItem('axim_global_session');
+        if (localSession) {
+          try {
+            sessionData = JSON.parse(localSession);
+          } catch (e) {
+            sessionData = localSession;
+          }
+        }
+      }
+
+      if (sessionData) {
+        const username = (typeof sessionData === 'object' && sessionData.username) ? sessionData.username : 'User';
+        setGlobalUser(username);
+      }
+    };
+    checkGlobalSession();
+  }, []);
+
 
   const connectWeb3 = async () => {
     if (!window.ethereum) {
@@ -39,6 +75,17 @@ const LoginButton = ({ dict, address, setAddress }) => {
     alert("Email login coming soon!");
     setShowOptions(false);
   };
+
+
+  if (globalUser) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 border-2 border-neon-green text-neon-green bg-neon-green/10 font-mono text-xs transition-all shadow-neon-green">
+        <SafeIcon icon={FiUser} />
+        <span>Hi, {globalUser}</span>
+        <span className="ml-2 bg-neon-green text-[#0d0d13] px-1 py-0.5 text-[10px] font-bold">Asset Vault</span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
