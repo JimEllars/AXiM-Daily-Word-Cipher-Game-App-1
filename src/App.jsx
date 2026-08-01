@@ -128,7 +128,7 @@ function App() {
 
   return (
     <CRTOverlay>
-      <div className="w-full h-full flex flex-col items-center pb-12">
+      <div className="w-full h-full flex flex-col items-center pb-4 flex-1">
         <Header
           language={language}
           setLanguage={setLanguage}
@@ -143,7 +143,9 @@ function App() {
           }}
         />
 
-        <div className="w-full max-w-2xl flex justify-end px-4 mb-4 mt-6">
+        <div className="flex-1 w-full max-w-2xl flex flex-col items-center justify-between mt-4">
+          <div className="w-full flex flex-col items-center flex-1">
+        <div className="w-full flex justify-end px-4 mb-2">
 
           <div className="flex gap-2">
             <button 
@@ -184,6 +186,8 @@ function App() {
           )}
         </AnimatePresence>
 
+        <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0">
+
         <ErrorBoundary>
         <GameBoard 
           guesses={guesses} 
@@ -194,6 +198,7 @@ function App() {
           startPracticeGame={startPracticeGame}
         />
         </ErrorBoundary>
+        </div>
 
         <GameInput 
           currentGuess={currentGuess}
@@ -204,6 +209,7 @@ function App() {
           disabled={gameOver}
         />
 
+        <div className="w-full mt-auto pt-2 shrink-0">
         <Keyboard
           guesses={guesses}
           targetWord={targetWord}
@@ -218,6 +224,7 @@ function App() {
             }
           }}
         />
+        </div>
 
         <AnimatePresence>
           {hasWon && (
@@ -245,6 +252,9 @@ function App() {
           unlockedBadges={unlockedBadges} 
           title={dict.badgesTitle} 
         />
+
+        </div>
+        </div>
 
         {/* Modals */}
         <Leaderboard 
