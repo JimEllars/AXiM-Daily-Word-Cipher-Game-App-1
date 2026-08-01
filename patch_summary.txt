@@ -1,16 +1,5 @@
-b21e3bf feat: add practice score migration
-e590ff3 feat: practice mode lifetime score, skip mechanic, and decoupled telemetry
-fece248 Merge pull request #21 from JimEllars/feature/sprint-32-practice-mode-757449179903847836
-This patch implements the following features for Sprint #33:
-1. Practice Mode Lifetime Score:
-   - Updated `calculateScore` in `useGameEngine.js` to reward points in practice mode (100 max, -20 per attempt, 10 min).
-   - Added `lifetimePracticeScore` state and synced it via `localStorage` and `worker.js` POST `/api/user/sync`.
-   - Safely falls back if `lifetime_practice_score` DB column doesn't exist.
-   - Added the explicit DB migration file `migrations/0002_add_practice_score.sql`.
-2. Skip Mechanic & Terminal Wipe:
-   - Added `isWiping` state to trigger the newly added CSS keyframe `terminal-wipe` from `tailwind.config.js`.
-   - Plumbed `skipPracticeWord` and `isWiping` into `App.jsx` -> `GameBoard.jsx`.
-   - Created the conditional `[ SKIP CIPHER ]` button in practice mode.
-3. Telemetry Event Separation:
-   - Refactored `useTelemetry.js` to optionally parse `practiceMode` flag and append `PRACTICE_` string.
-   - Pushed `practiceMode` onto all `trackEvent` hooks (Start, Submits, Skips, Completions).
+Patch Summary - Sprint #34:
+
+- Task 1: Replaced the standalone game header in `src/components/Header.jsx` with a global AXiM header incorporating navigation links and a unified aesthetic mimicking the parent site. Maintained sticky positioning and viewport scaling.
+- Task 2: Renamed `WalletButton.jsx` to `LoginButton.jsx` and updated it to render a dropdown modal with "Login with Email" and "Connect Web3 Wallet" options. It now accurately displays "Hi, {username}" or truncated wallet address on successful authentication. Integrated this new component seamlessly into the top-right of the `Header` component.
+- Task 3: Restored the logic for guess distribution calculations in `src/hooks/useGameEngine.js`. Created a new `GuessDistribution.jsx` component and positioned it below the game board in `src/App.jsx`, ensuring it reads and displays guess metrics minimally at the bottom of the viewport.

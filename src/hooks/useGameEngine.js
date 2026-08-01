@@ -337,6 +337,14 @@ export const useGameEngine = (walletAddress) => {
         localStorage.setItem('axim_streak', newStreak);
         localStorage.setItem('axim_last_played', new Date().toDateString());
         currentEvaluatedStreak = newStreak;
+
+        // Update guess distribution
+        const dist = JSON.parse(localStorage.getItem('axim_guess_distribution')) || { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6+": 0 };
+        const attempts = newGuesses.length;
+        const bucket = attempts >= 6 ? "6+" : attempts.toString();
+        dist[bucket] = (dist[bucket] || 0) + 1;
+        localStorage.setItem('axim_guess_distribution', JSON.stringify(dist));
+        window.dispatchEvent(new Event('storage')); // manually trigger storage event in same tab for GuessDistribution component
       } else {
         const updatedLifetimeScore = lifetimePracticeScore + newScore;
         setLifetimePracticeScore(updatedLifetimeScore);

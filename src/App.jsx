@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
+import GuessDistribution from './components/GuessDistribution';
 import StatsPanel from './components/StatsPanel';
 import GameBoard from './components/GameBoard';
 import GameInput from './components/GameInput';
@@ -7,7 +8,7 @@ import Keyboard from './components/Keyboard';
 import BadgesPanel from './components/BadgesPanel';
 import Leaderboard from './components/Leaderboard';
 import Instructions from './components/Instructions';
-import WalletButton from './components/WalletButton';
+import LoginButton from './components/LoginButton';
 import ShareButton from './components/ShareButton';
 import CRTOverlay from './components/layout/CRTOverlay';
 import ErrorBoundary from './components/layout/ErrorBoundary';
@@ -128,15 +129,22 @@ function App() {
   return (
     <CRTOverlay>
       <div className="w-full h-full flex flex-col items-center pb-12">
-        <Header language={language} setLanguage={setLanguage} isPracticeMode={isPracticeMode} />
-        
-        <div className="w-full max-w-2xl flex justify-between px-4 mb-4">
-          <WalletButton dict={dict} address={walletAddress} setAddress={(addr) => {
+        <Header
+          language={language}
+          setLanguage={setLanguage}
+          isPracticeMode={isPracticeMode}
+          dict={dict}
+          address={walletAddress}
+          setAddress={(addr) => {
             setWalletAddress(addr);
             if (!addr) {
               setHasMintedToday(false);
             }
-          }} />
+          }}
+        />
+
+        <div className="w-full max-w-2xl flex justify-end px-4 mb-4 mt-6">
+
           <div className="flex gap-2">
             <button 
               onClick={() => setShowLeaderboard(true)}
@@ -252,6 +260,7 @@ function App() {
           dict={dict} 
         />
 
+        <GuessDistribution dictionary={dict} />
       </div>
     </CRTOverlay>
   );
