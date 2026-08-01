@@ -30,7 +30,7 @@ const GuessDistribution = ({ dictionary }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-lg mt-12 mb-6 px-4"
+      className="w-full max-w-lg mt-6 mb-6 px-4 mx-auto"
     >
       <h3 className="text-gray-400 text-xs mb-3 uppercase tracking-widest text-center">
         {dictionary?.guessDistribution || 'GUESS DISTRIBUTION'}

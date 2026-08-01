@@ -128,7 +128,7 @@ function App() {
 
   return (
     <CRTOverlay>
-      <div className="w-full h-full flex flex-col items-center pb-4 flex-1">
+      <div className="w-full min-h-full flex flex-col items-center pb-4 flex-1 overflow-y-auto">
         <Header
           language={language}
           setLanguage={setLanguage}
@@ -226,6 +226,10 @@ function App() {
         />
         </div>
 
+        <div className="w-full mt-8 opacity-75">
+          <GuessDistribution dictionary={dict} />
+        </div>
+
         <AnimatePresence>
           {hasWon && (
             <motion.div
@@ -269,9 +273,7 @@ function App() {
           onClose={() => setShowInstructions(false)} 
           dict={dict} 
         />
-
-        <GuessDistribution dictionary={dict} />
-      </div>
+</div>
     </CRTOverlay>
   );
 }
