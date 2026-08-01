@@ -38,6 +38,38 @@ const calculateScore = (attempts, isPracticeMode = false) => {
 
 export const useGameEngine = (walletAddress) => {
   const { trackEvent } = useTelemetry();
+
+  // Task 2: Timer Purge (Deep Clean)
+  useEffect(() => {
+    localStorage.removeItem('axim_timer');
+    localStorage.removeItem('axim_timeElapsed');
+    localStorage.removeItem('axim_startTime');
+    localStorage.removeItem('axim_bestTime');
+
+    // Check axim_current_session for timer-related keys and purge them
+    const currentSessionStr = localStorage.getItem('axim_current_session');
+    if (currentSessionStr) {
+      try {
+        const session = JSON.parse(currentSessionStr);
+        let modified = false;
+
+        ['timer', 'timeElapsed', 'startTime', 'bestTime'].forEach(key => {
+          if (key in session) {
+            delete session[key];
+            modified = true;
+          }
+        });
+
+        if (modified) {
+          localStorage.setItem('axim_current_session', JSON.stringify(session));
+        }
+      } catch(e) {
+        // Ignored
+      }
+    }
+  }, []);
+
+
   const [isPracticeMode, setIsPracticeMode] = useState(false);
   const hasTrackedStart = useRef(false);
   const [targetWord, setTargetWord] = useState('');
