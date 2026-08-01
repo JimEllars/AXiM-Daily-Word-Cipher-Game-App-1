@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTelemetry } from './useTelemetry';
-import { FALLBACK_WORDS, getDailyWord } from '../constants/words';
+import { FALLBACK_WORDS, getDailyWord, getRandomPracticeWord } from '../constants/words';
 import { ethers } from 'ethers';
 import { WEB3_CONFIG } from '../config/web3';
 
@@ -28,14 +28,15 @@ const calculateScore = (attempts) => {
 
 export const useGameEngine = (walletAddress) => {
   const { trackEvent } = useTelemetry();
+  const [isPracticeMode, setIsPracticeMode] = useState(false);
   const hasTrackedStart = useRef(false);
   const [targetWord, setTargetWord] = useState('');
   const [guesses, setGuesses] = useState(() => {
-    const session = localStorage.getItem('axim_current_session');
+    const session = !isPracticeMode ? localStorage.getItem('axim_current_session') : null;
     if (session) {
       try {
         const parsed = JSON.parse(session);
-        if (parsed.date === new Date().toDateString()) {
+        if (parsed.date === new Date().toDateString() && !isPracticeMode) {
           return parsed.guesses || [];
         }
       } catch (e) {
@@ -55,11 +56,11 @@ export const useGameEngine = (walletAddress) => {
   const [hasWon, setHasWon] = useState(false);
 
   const [score, setScore] = useState(() => {
-    const session = localStorage.getItem('axim_current_session');
+    const session = !isPracticeMode ? localStorage.getItem('axim_current_session') : null;
     if (session) {
       try {
         const parsed = JSON.parse(session);
-        if (parsed.date === new Date().toDateString()) {
+        if (parsed.date === new Date().toDateString() && !isPracticeMode) {
           // If a cached score exists from the old time-based system, gracefully preserve it for today
           if (parsed.accumulatedSeconds !== undefined && parsed.score !== undefined) {
              return parsed.score;
@@ -89,7 +90,7 @@ export const useGameEngine = (walletAddress) => {
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'axim_current_session') {
-        if (!e.newValue) {
+        if (!e.newValue && !isPracticeMode) {
           // If session was flushed
           setGuesses([]);
           setScore(MAX_SCORE);
@@ -98,7 +99,7 @@ export const useGameEngine = (walletAddress) => {
         } else {
           try {
             const parsed = JSON.parse(e.newValue);
-            if (parsed.date === new Date().toDateString()) {
+            if (parsed.date === new Date().toDateString() && !isPracticeMode) {
               if (parsed.guesses !== undefined) {
                 setGuesses(parsed.guesses);
                 // If it's a legacy cached session with accumulatedSeconds, preserve its score for today
@@ -160,6 +161,7 @@ export const useGameEngine = (walletAddress) => {
   // Fetch daily word
   useEffect(() => {
     const fetchWord = async () => {
+      if (isPracticeMode) return;
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -234,6 +236,16 @@ export const useGameEngine = (walletAddress) => {
     setStreak(savedStreak ? parseInt(savedStreak) : 3);
   }, []);
 
+  const startPracticeGame = useCallback(() => {
+    const prevTargetWord = targetWord;
+    setIsPracticeMode(true);
+    setGuesses([]);
+    setCurrentGuess('');
+    setGameOver(false);
+    setHasWon(false);
+    setTargetWord(getRandomPracticeWord(prevTargetWord));
+  }, [targetWord]);
+
   const submitGuess = useCallback((guessStr) => {
     if (gameOver || guessStr.length !== WORD_LENGTH) return false;
 
@@ -246,7 +258,7 @@ export const useGameEngine = (walletAddress) => {
 
     // Check if we need to preserve legacy score
     let newScore = score;
-    const session = localStorage.getItem('axim_current_session');
+    const session = !isPracticeMode ? localStorage.getItem('axim_current_session') : null;
     let hasLegacyScore = false;
     let accumulatedSeconds = 0;
     if (session) {
@@ -274,32 +286,39 @@ export const useGameEngine = (walletAddress) => {
         sessionData.score = newScore;
     }
 
-    localStorage.setItem('axim_current_session', JSON.stringify(sessionData));
+    if (!isPracticeMode) {
+      localStorage.setItem('axim_current_session', JSON.stringify(sessionData));
+    }
 
     if (upperGuess === targetWord) {
       setGameOver(true);
       setHasWon(true);
-      localStorage.removeItem('axim_current_session');
-      
-      const newStreak = streak + 1;
-      setStreak(newStreak);
-      localStorage.setItem('axim_streak', newStreak);
-      localStorage.setItem('axim_last_played', new Date().toDateString());
+      let currentEvaluatedStreak = streak;
+      if (!isPracticeMode) {
+        localStorage.removeItem('axim_current_session');
+
+        const newStreak = streak + 1;
+        setStreak(newStreak);
+        localStorage.setItem('axim_streak', newStreak);
+        localStorage.setItem('axim_last_played', new Date().toDateString());
+        currentEvaluatedStreak = newStreak;
+      }
       
 
-      evaluateBadges(newGuesses.length, 0, newStreak);
+      evaluateBadges(newGuesses.length, 0, currentEvaluatedStreak);
       trackEvent('GAME_COMPLETED', {
         hasWon: true,
         score: newScore,
-        streak: newStreak,
-        time_elapsed: 0
+        streak: currentEvaluatedStreak,
+        time_elapsed: 0,
+        practiceMode: isPracticeMode
       });
 
     }
     // We removed the hard fail state (newScore === 0) since there are unlimited attempts.
     
     return true;
-  }, [gameOver, guesses, targetWord, streak, score, trackEvent]);
+  }, [gameOver, guesses, targetWord, streak, score, trackEvent, isPracticeMode]);
 
 
   const forfeitGame = useCallback(() => {
@@ -311,17 +330,20 @@ export const useGameEngine = (walletAddress) => {
     setHasWon(false);
     setGuesses(prev => [...prev, targetWord]);
 
-    localStorage.removeItem('axim_current_session');
-    localStorage.setItem('axim_last_played', new Date().toDateString());
+    if (!isPracticeMode) {
+      localStorage.removeItem('axim_current_session');
+      localStorage.setItem('axim_last_played', new Date().toDateString());
+    }
 
     trackEvent('GAME_COMPLETED', {
       hasWon: false,
       score: newScore,
       streak: streak,
       time_elapsed: 0,
-      forfeit: true
+      forfeit: true,
+      practiceMode: isPracticeMode
     });
-  }, [gameOver, streak, trackEvent, targetWord]);
+  }, [gameOver, streak, trackEvent, targetWord, isPracticeMode]);
 
   const evaluateBadges = (attempts, time, currentStreak) => {
     const newBadges = ['genesis'];
@@ -344,6 +366,8 @@ export const useGameEngine = (walletAddress) => {
     streak,
     targetWord,
     hasMintedToday,
-    setHasMintedToday
+    setHasMintedToday,
+    isPracticeMode,
+    startPracticeGame
   };
 };
