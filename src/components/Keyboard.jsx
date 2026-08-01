@@ -9,26 +9,10 @@ const KEYBOARD_ROWS = [
   ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACKSPACE']
 ];
 
-const Keyboard = ({ guesses, targetWord, onKeyPress }) => {
+const Keyboard = ({ usedLetters, guesses, targetWord, onKeyPress }) => {
   const { playClick } = useAudio();
   const getKeyStatus = (key) => {
-    let status = 'unused';
-    for (const guess of guesses) {
-      for (let i = 0; i < guess.length; i++) {
-        if (guess[i] === key) {
-          if (targetWord[i] === key) {
-            return 'correct'; // Priority to correct
-          }
-          if (status !== 'correct' && targetWord.includes(key)) {
-            status = 'present';
-          }
-          if (status === 'unused' && !targetWord.includes(key)) {
-            status = 'absent';
-          }
-        }
-      }
-    }
-    return status;
+    return usedLetters[key] || 'unused';
   };
 
   const getKeyColor = (status) => {

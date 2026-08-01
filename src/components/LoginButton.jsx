@@ -39,9 +39,21 @@ const LoginButton = ({ dict, address, setAddress }) => {
       if (sessionData) {
         const username = (typeof sessionData === 'object' && sessionData.username) ? sessionData.username : 'User';
         setGlobalUser(username);
+      } else {
+        setGlobalUser(null);
       }
     };
+
     checkGlobalSession();
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'axim_global_session') {
+        checkGlobalSession();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
 
