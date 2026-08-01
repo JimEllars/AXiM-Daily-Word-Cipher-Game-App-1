@@ -91,11 +91,7 @@ export const useGameEngine = (walletAddress) => {
       try {
         const parsed = JSON.parse(session);
         if (parsed.date === new Date().toDateString() && !isPracticeMode) {
-          // If a cached score exists from the old time-based system, gracefully preserve it for today
-          if (parsed.accumulatedSeconds !== undefined && parsed.score !== undefined) {
-             return parsed.score;
-          }
-          // Otherwise calculate based on new tier
+
           return calculateScore((parsed.guesses || []).length, false);
         }
       } catch (e) {
@@ -136,12 +132,7 @@ export const useGameEngine = (walletAddress) => {
             if (parsed.date === new Date().toDateString() && !isPracticeMode) {
               if (parsed.guesses !== undefined) {
                 setGuesses(parsed.guesses);
-                // If it's a legacy cached session with accumulatedSeconds, preserve its score for today
-                if (parsed.accumulatedSeconds !== undefined && parsed.score !== undefined) {
-                  setScore(parsed.score);
-                } else {
-                  setScore(calculateScore(parsed.guesses.length, false));
-                }
+                setScore(calculateScore(parsed.guesses.length, false));
               }
               if (parsed.gameOver !== undefined) setGameOver(parsed.gameOver);
               if (parsed.hasWon !== undefined) setHasWon(parsed.hasWon);
@@ -311,24 +302,7 @@ export const useGameEngine = (walletAddress) => {
 
     setCurrentGuess('');
 
-    // Check if we need to preserve legacy score
-    let newScore = score;
-    const session = !isPracticeMode ? localStorage.getItem('axim_current_session') : null;
-    let hasLegacyScore = false;
-    let accumulatedSeconds = 0;
-    if (session) {
-      try {
-        const parsed = JSON.parse(session);
-        if (parsed.accumulatedSeconds !== undefined) {
-           hasLegacyScore = true;
-           accumulatedSeconds = parsed.accumulatedSeconds;
-        }
-      } catch(e){ console.error(e); }
-    }
-
-    if (!hasLegacyScore) {
-       newScore = calculateScore(newGuesses.length, isPracticeMode);
-    }
+    const newScore = calculateScore(newGuesses.length, isPracticeMode);
     setScore(newScore);
 
     const sessionData = {
@@ -336,10 +310,7 @@ export const useGameEngine = (walletAddress) => {
       date: new Date().toDateString()
     };
 
-    if (hasLegacyScore) {
-        sessionData.accumulatedSeconds = accumulatedSeconds;
-        sessionData.score = newScore;
-    }
+
 
     if (!isPracticeMode) {
       localStorage.setItem('axim_current_session', JSON.stringify(sessionData));
@@ -385,12 +356,12 @@ export const useGameEngine = (walletAddress) => {
       }
       
 
-      evaluateBadges(newGuesses.length, 0, currentEvaluatedStreak);
+      evaluateBadges(newGuesses.length, currentEvaluatedStreak);
       trackEvent('GAME_COMPLETED', {
         hasWon: true,
         score: newScore,
         streak: currentEvaluatedStreak,
-        time_elapsed: 0,
+
         practiceMode: isPracticeMode
       });
 
@@ -419,15 +390,15 @@ export const useGameEngine = (walletAddress) => {
       hasWon: false,
       score: newScore,
       streak: streak,
-      time_elapsed: 0,
+
       forfeit: true,
       practiceMode: isPracticeMode
     });
   }, [gameOver, streak, trackEvent, targetWord, isPracticeMode]);
 
-  const evaluateBadges = (attempts, time, currentStreak) => {
+  const evaluateBadges = (attempts, currentStreak) => {
     const newBadges = ['genesis'];
-    if (time < 30) newBadges.push('speed_demon'); // this might never trigger if time is always 0 now, but keeping for legacy
+
     if (attempts === 1) newBadges.push('flawless');
     if (currentStreak >= 3) newBadges.push('streak_3');
     setUnlockedBadges(newBadges);
