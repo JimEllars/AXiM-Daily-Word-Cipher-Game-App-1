@@ -7,7 +7,17 @@ import { WEB3_CONFIG } from '../config/web3';
 const MAX_SCORE = 1000;
 const WORD_LENGTH = 5;
 
-const calculateScore = (attempts) => {
+const calculateScore = (attempts, isPracticeMode = false) => {
+  if (isPracticeMode) {
+    if (attempts <= 1) return 100;
+
+    let score = 100;
+    for (let i = 2; i <= attempts; i++) {
+      score -= 20;
+    }
+    return Math.max(10, score);
+  }
+
   if (attempts <= 1) return 1000;
 
   let score = 1000;
@@ -66,7 +76,7 @@ export const useGameEngine = (walletAddress) => {
              return parsed.score;
           }
           // Otherwise calculate based on new tier
-          return calculateScore((parsed.guesses || []).length);
+          return calculateScore((parsed.guesses || []).length, false);
         }
       } catch (e) {
         console.error('Failed to parse session score', e);
@@ -78,13 +88,17 @@ export const useGameEngine = (walletAddress) => {
   const [unlockedBadges, setUnlockedBadges] = useState([]);
   const [streak, setStreak] = useState(0);
   const [hasMintedToday, setHasMintedToday] = useState(false);
+  const [isWiping, setIsWiping] = useState(false);
+  const [lifetimePracticeScore, setLifetimePracticeScore] = useState(() => {
+    return parseInt(localStorage.getItem('axim_lifetime_practice_score') || '0', 10);
+  });
 
   useEffect(() => {
     if (!hasTrackedStart.current && !gameOver) {
-      trackEvent('GAME_STARTED', { timestamp: Date.now() });
+      trackEvent('GAME_STARTED', { timestamp: Date.now(), practiceMode: isPracticeMode });
       hasTrackedStart.current = true;
     }
-  }, [gameOver, trackEvent]);
+  }, [gameOver, trackEvent, isPracticeMode]);
 
   // Cross-tab synchronization
   useEffect(() => {
@@ -106,7 +120,7 @@ export const useGameEngine = (walletAddress) => {
                 if (parsed.accumulatedSeconds !== undefined && parsed.score !== undefined) {
                   setScore(parsed.score);
                 } else {
-                  setScore(calculateScore(parsed.guesses.length));
+                  setScore(calculateScore(parsed.guesses.length, false));
                 }
               }
               if (parsed.gameOver !== undefined) setGameOver(parsed.gameOver);
@@ -237,14 +251,35 @@ export const useGameEngine = (walletAddress) => {
   }, []);
 
   const startPracticeGame = useCallback(() => {
-    const prevTargetWord = targetWord;
-    setIsPracticeMode(true);
-    setGuesses([]);
-    setCurrentGuess('');
-    setGameOver(false);
-    setHasWon(false);
-    setTargetWord(getRandomPracticeWord(prevTargetWord));
+    setIsWiping(true);
+    setTimeout(() => {
+      const prevTargetWord = targetWord;
+      setIsPracticeMode(true);
+      setGuesses([]);
+      setCurrentGuess('');
+      setGameOver(false);
+      setHasWon(false);
+      setTargetWord(getRandomPracticeWord(prevTargetWord));
+      setIsWiping(false);
+    }, 300);
   }, [targetWord]);
+
+  const skipPracticeWord = useCallback(() => {
+    if (!isPracticeMode) return;
+
+    setIsWiping(true);
+    setTimeout(() => {
+      const prevTargetWord = targetWord;
+      setGuesses([]);
+      setCurrentGuess('');
+      setGameOver(false);
+      setHasWon(false);
+      setTargetWord(getRandomPracticeWord(prevTargetWord));
+      setIsWiping(false);
+
+      trackEvent('PRACTICE_WORD_SKIPPED', { previousWord: prevTargetWord });
+    }, 300);
+  }, [isPracticeMode, targetWord, trackEvent]);
 
   const submitGuess = useCallback((guessStr) => {
     if (gameOver || guessStr.length !== WORD_LENGTH) return false;
@@ -252,7 +287,7 @@ export const useGameEngine = (walletAddress) => {
     const upperGuess = guessStr.toUpperCase();
     const newGuesses = [...guesses, upperGuess];
     setGuesses(newGuesses);
-    trackEvent('GUESS_SUBMITTED', { attemptNumber: newGuesses.length, guess: upperGuess });
+    trackEvent('GUESS_SUBMITTED', { attemptNumber: newGuesses.length, guess: upperGuess, practiceMode: isPracticeMode });
 
     setCurrentGuess('');
 
@@ -272,7 +307,7 @@ export const useGameEngine = (walletAddress) => {
     }
 
     if (!hasLegacyScore) {
-       newScore = calculateScore(newGuesses.length);
+       newScore = calculateScore(newGuesses.length, isPracticeMode);
     }
     setScore(newScore);
 
@@ -302,6 +337,23 @@ export const useGameEngine = (walletAddress) => {
         localStorage.setItem('axim_streak', newStreak);
         localStorage.setItem('axim_last_played', new Date().toDateString());
         currentEvaluatedStreak = newStreak;
+      } else {
+        const updatedLifetimeScore = lifetimePracticeScore + newScore;
+        setLifetimePracticeScore(updatedLifetimeScore);
+        localStorage.setItem('axim_lifetime_practice_score', updatedLifetimeScore);
+
+        if (walletAddress) {
+          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              wallet_address: walletAddress,
+              lifetime_practice_score: updatedLifetimeScore
+            })
+          }).catch(err => console.error('Failed to sync lifetime score', err));
+        }
       }
       
 
@@ -368,6 +420,9 @@ export const useGameEngine = (walletAddress) => {
     hasMintedToday,
     setHasMintedToday,
     isPracticeMode,
-    startPracticeGame
+    startPracticeGame,
+    lifetimePracticeScore,
+    isWiping,
+    skipPracticeWord
   };
 };

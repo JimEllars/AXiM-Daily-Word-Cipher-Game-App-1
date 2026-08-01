@@ -32,10 +32,16 @@ export default {
         'pulse-red': {
           '0%, 100%': { boxShadow: '0 0 0px 0px rgba(239, 68, 68, 0)', borderColor: 'rgb(31 41 55)' },
           '50%': { boxShadow: '0 0 15px 2px rgba(239, 68, 68, 0.5)', borderColor: 'rgba(239, 68, 68, 0.8)' },
+        },
+        'terminal-wipe': {
+          '0%': { opacity: '1' },
+          '50%': { opacity: '0.1' },
+          '100%': { opacity: '1' }
         }
       },
       animation: {
         'pulse-red': 'pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'terminal-wipe': 'terminal-wipe 300ms ease-in-out',
       }
     },
   },

@@ -95,7 +95,7 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
   if (pathname === "/api/user/sync" && request.method === "POST") {
     try {
       const data = await request.json();
-      const { wallet_address, score, streak } = data;
+      const { wallet_address, score, streak, lifetime_practice_score } = data;
 
       if (!wallet_address) {
         return json({ error: "Missing wallet_address" }, { status: 400 });
@@ -105,9 +105,20 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
         "SELECT * FROM UserStates WHERE wallet_address = ?"
       ).bind(wallet_address).first();
 
-      await env.DB.prepare(
-        "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played) VALUES (?, ?, ?, ?)"
-      ).bind(wallet_address, score || (existing ? existing.score : 0), streak || (existing ? existing.streak : 0), Date.now()).run();
+      const finalScore = score !== undefined ? score : (existing ? existing.score : 0);
+      const finalStreak = streak !== undefined ? streak : (existing ? existing.streak : 0);
+      const finalPracticeScore = lifetime_practice_score !== undefined ? lifetime_practice_score : (existing && existing.lifetime_practice_score !== undefined ? existing.lifetime_practice_score : 0);
+
+      try {
+        await env.DB.prepare(
+          "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played, lifetime_practice_score) VALUES (?, ?, ?, ?, ?)"
+        ).bind(wallet_address, finalScore, finalStreak, Date.now(), finalPracticeScore).run();
+      } catch (e) {
+        // Fallback if lifetime_practice_score column does not exist
+        await env.DB.prepare(
+          "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played) VALUES (?, ?, ?, ?)"
+        ).bind(wallet_address, finalScore, finalStreak, Date.now()).run();
+      }
 
       return json({ status: "success" });
     } catch (error) {
