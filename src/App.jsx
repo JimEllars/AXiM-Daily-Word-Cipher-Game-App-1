@@ -128,7 +128,7 @@ function App() {
 
   return (
     <CRTOverlay>
-      <div className="w-full min-h-full flex flex-col justify-between items-center pb-4 pb-[env(safe-area-inset-bottom)] flex-1 overflow-y-auto">
+      <div className="grid grid-rows-[auto_1fr_auto] min-h-[100dvh] w-full overflow-hidden">
         <Header
           dict={dict}
           address={walletAddress}
@@ -140,7 +140,7 @@ function App() {
           }}
         />
 
-        <div className="flex-1 w-full max-w-2xl flex flex-col items-center justify-between mt-4">
+        <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-between mt-4 overflow-y-auto min-h-0">
           <div className="w-full flex flex-col items-center flex-1">
         <div className="w-full flex justify-end px-4 mb-2">
 
@@ -165,6 +165,7 @@ function App() {
         <StatsPanel
           score={score}
           streak={streak}
+          lifetimePracticeScore={lifetimePracticeScore}
           dictionary={dict}
         />
 

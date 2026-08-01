@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const StatsPanel = ({ score, streak, dictionary }) => {
+const StatsPanel = ({ score, streak, lifetimePracticeScore, dictionary }) => {
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -17,6 +17,12 @@ const StatsPanel = ({ score, streak, dictionary }) => {
           <span className="text-gray-400 text-xs mb-1 uppercase">{dictionary.streak}</span>
           <span className="font-bold text-neon-pink">{streak} 🔥</span>
         </div>
+        {lifetimePracticeScore !== undefined && (
+          <div className="flex flex-col items-center">
+            <span className="text-gray-400 text-xs mb-1 uppercase">Practice Score</span>
+            <span className="font-bold text-neon-blue">{lifetimePracticeScore}</span>
+          </div>
+        )}
       </div>
     </motion.div>
   );
