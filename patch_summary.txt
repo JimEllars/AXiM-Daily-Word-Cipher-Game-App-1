@@ -1,0 +1,16 @@
+Sprint #32 - Practice Mode Implementation
+
+Modified files:
+- src/constants/words.js
+- src/hooks/useGameEngine.js
+- src/components/Header.jsx
+- src/components/GameBoard.jsx
+- src/App.jsx
+
+Changes:
+1. Added `getRandomPracticeWord` to filter out current daily words and bypass UTC seeding for random replays.
+2. Introduced `isPracticeMode` state to `useGameEngine`.
+3. Created `startPracticeGame` to reset guesses and toggle the practice state.
+4. Bypassed `localStorage` read/writes for `axim_current_session`, `axim_streak`, and `axim_last_played` when `isPracticeMode` is active.
+5. Implemented a subtle neon-yellow `[ PRACTICE MODE ]` badge in the header.
+6. Added a `[ PLAY AGAIN ]` button to the `GameBoard` post-game state (revealed on win/forfeit).

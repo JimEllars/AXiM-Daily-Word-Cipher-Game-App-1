@@ -20,3 +20,10 @@ export const getDailyWord = () => {
   const index = dayOfYear % DAILY_WORDS.length;
   return DAILY_WORDS[index];
 };
+
+export const getRandomPracticeWord = (currentWord) => {
+  const availableWords = DAILY_WORDS.filter(w => w !== currentWord);
+  if (availableWords.length === 0) return DAILY_WORDS[0];
+  const randomIndex = Math.floor(Math.random() * availableWords.length);
+  return availableWords[randomIndex];
+};

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver }) => {
+const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, startPracticeGame }) => {
   const [hint, setHint] = useState(null);
   const [displayedHint, setDisplayedHint] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -211,6 +211,20 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver }) =
               className="py-2 px-4 border-2 border-red-500 text-red-500 font-cyber text-sm font-bold shadow-[0_0_10px_rgba(239,68,68,0.5),_0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500 hover:text-white transition-all"
             >
               [ FORFEIT & REVEAL CIPHER ]
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {gameOver && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              onClick={startPracticeGame}
+              className="py-2 px-4 border-2 border-neon-green text-neon-green font-cyber text-sm font-bold shadow-[0_0_10px_rgba(0,255,157,0.5),_0_0_20px_rgba(0,255,157,0.3)] hover:bg-neon-green hover:text-black transition-all"
+            >
+              [ PLAY AGAIN ]
             </motion.button>
           )}
         </AnimatePresence>

@@ -46,7 +46,9 @@ function App() {
     unlockedBadges,
     streak,
     hasMintedToday,
-    setHasMintedToday
+    setHasMintedToday,
+    isPracticeMode,
+    startPracticeGame
   } = useGameEngine(walletAddress);
 
 
@@ -123,7 +125,7 @@ function App() {
   return (
     <CRTOverlay>
       <div className="w-full h-full flex flex-col items-center pb-12">
-        <Header language={language} setLanguage={setLanguage} />
+        <Header language={language} setLanguage={setLanguage} isPracticeMode={isPracticeMode} />
         
         <div className="w-full max-w-2xl flex justify-between px-4 mb-4">
           <WalletButton dict={dict} address={walletAddress} setAddress={(addr) => {
@@ -178,6 +180,7 @@ function App() {
           targetWord={targetWord} 
           onForfeit={forfeitGame}
           gameOver={gameOver}
+          startPracticeGame={startPracticeGame}
         />
         </ErrorBoundary>
 
