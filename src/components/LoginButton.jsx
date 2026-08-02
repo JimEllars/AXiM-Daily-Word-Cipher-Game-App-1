@@ -94,7 +94,7 @@ const LoginButton = ({ dict, address, setAddress }) => {
       <div className="flex items-center gap-2 px-4 py-2 border-2 border-neon-green text-neon-green bg-neon-green/10 font-mono text-xs transition-all shadow-neon-green">
         <SafeIcon icon={FiUser} />
         <span>Hi, {globalUser}</span>
-        <span className="ml-2 bg-neon-green text-[#0d0d13] px-1 py-0.5 text-[10px] font-bold">Asset Vault</span>
+        <a href="https://axim.us.com/profile" target="_self" className="ml-2 bg-neon-green text-[#0d0d13] px-1 py-0.5 text-[10px] font-bold no-underline">Asset Vault</a>
       </div>
     );
   }

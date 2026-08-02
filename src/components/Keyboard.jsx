@@ -43,7 +43,7 @@ const Keyboard = ({ usedLetters, guesses, targetWord, onKeyPress }) => {
                 onClick={() => { playClick(); onKeyPress(key); }}
                 className={`
                   flex items-center justify-center font-bold border-2 rounded-sm
-                  transition-colors select-none
+                  transition-colors select-none touch-none
                   ${isEnter || isBackspace ? 'px-2 sm:px-4 text-xs sm:text-sm' : 'w-8 sm:w-10 text-sm sm:text-base'}
                   h-12 sm:h-14 ${colorClass}
                 `}

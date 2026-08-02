@@ -30,7 +30,7 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak, isPracticeMode 
     const attempts = guesses.length >= 6 ? 'X' : guesses.length;
     const header = isPracticeMode ? 'AXiM Practice Cipher' : 'AXiM Daily Cipher';
 
-    return `${header} ${attempts}/6\nScore: ${score}\n${emojiBoard.trim()}`;
+    return `${header} ${attempts}/6\nScore: ${score}\n${emojiBoard.trim()}\n\nPlay at: https://axim.us.com/games/daily-word-cipher`;
   };
 
 
