@@ -43,6 +43,16 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak, isPracticeMode 
 
   const handleShare = async () => {
     const textToShare = generateShareText();
+    try {
+      await navigator.clipboard.writeText(textToShare);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      alert('Clipboard access denied. Please manually copy your score!');
+    }
+
+    // Also try to use native share if available, but copy to clipboard is primary as requested
     if (navigator.share) {
       try {
         await navigator.share({
@@ -53,15 +63,6 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak, isPracticeMode 
         if (err.name !== 'AbortError') {
           console.error('Failed to share: ', err);
         }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(textToShare);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy text: ', err);
-        alert('Clipboard access denied. Please manually copy your score!');
       }
     }
   };
@@ -100,14 +101,14 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak, isPracticeMode 
         onClick={handleShare}
         className={`bg-transparent border-2 py-3 px-8 text-lg font-bold font-cyber transition-all flex items-center justify-center gap-2 ${
           copied
-            ? 'border-neon-green text-neon-green shadow-neon-green bg-neon-green/10'
+            ? 'border-neon-green text-[#0d0d13] shadow-neon-green bg-neon-green'
             : isViral
               ? 'border-neon-green text-neon-green hover:bg-neon-green/10 shadow-[0_0_15px_#39ff14] animate-pulse'
               : 'border-neon-pink text-neon-pink shadow-neon-pink hover:bg-neon-pink/10'
         }`}
       >
         <SafeIcon icon={copied ? FiCheck : FiShare2} />
-        {copied ? dict.copied : dict.shareBtn}
+        {copied ? '[ COPIED! ]' : dict.shareBtn}
       </button>
 
       <button
