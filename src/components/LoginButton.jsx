@@ -10,6 +10,27 @@ const LoginButton = ({ dict, address, setAddress }) => {
   const [connecting, setConnecting] = useState(false);
   const [globalUser, setGlobalUser] = useState(null);
 
+
+  useEffect(() => {
+    const handleAccountChange = (accounts) => {
+      if (accounts && accounts.length > 0) {
+        setAddress(accounts[0]);
+      } else {
+        setAddress(null);
+      }
+    };
+
+    if (window.ethereum && window.ethereum.on) {
+      window.ethereum.on('accountsChanged', handleAccountChange);
+    }
+
+    return () => {
+      if (window.ethereum && window.ethereum.removeListener) {
+        window.ethereum.removeListener('accountsChanged', handleAccountChange);
+      }
+    };
+  }, [setAddress]);
+
   useEffect(() => {
     const checkGlobalSession = () => {
       let sessionData = null;

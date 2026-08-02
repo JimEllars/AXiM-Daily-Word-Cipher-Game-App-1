@@ -40,7 +40,7 @@ const Keyboard = ({ usedLetters, guesses, targetWord, onKeyPress }) => {
               <motion.button
                 key={key}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => { playClick(); onKeyPress(key); }}
+                onPointerDown={(e) => { e.preventDefault(); playClick(); onKeyPress(key); }}
                 className={`
                   flex items-center justify-center font-bold border-2 rounded-sm
                   transition-colors select-none touch-none
