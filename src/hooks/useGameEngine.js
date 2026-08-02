@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTelemetry } from './useTelemetry';
 import { FALLBACK_WORDS, getDailyWord, getRandomPracticeWord } from '../constants/words';
 import { ethers } from 'ethers';
@@ -436,7 +436,25 @@ export const useGameEngine = (walletAddress) => {
     setUnlockedBadges(newBadges);
   };
 
+  const usedLetters = useMemo(() => {
+    const letters = {};
+    for (const guess of guesses) {
+      for (let i = 0; i < guess.length; i++) {
+        const char = guess[i];
+        if (targetWord[i] === char) {
+          letters[char] = 'correct'; // Priority to correct
+        } else if (letters[char] !== 'correct' && targetWord.includes(char)) {
+          letters[char] = 'present';
+        } else if (!letters[char] && !targetWord.includes(char)) {
+          letters[char] = 'absent';
+        }
+      }
+    }
+    return letters;
+  }, [guesses, targetWord]);
+
     return {
+    usedLetters,
     guesses,
     currentGuess,
     setCurrentGuess,

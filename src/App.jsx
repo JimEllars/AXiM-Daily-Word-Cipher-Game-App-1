@@ -52,7 +52,8 @@ function App() {
     startPracticeGame,
     lifetimePracticeScore,
     isWiping,
-    skipPracticeWord
+    skipPracticeWord,
+    usedLetters
   } = useGameEngine(walletAddress);
 
 
@@ -209,6 +210,7 @@ function App() {
 
         <div className="w-full mt-auto pt-2 shrink-0">
         <Keyboard
+          usedLetters={usedLetters}
           guesses={guesses}
           targetWord={targetWord}
           onKeyPress={(key) => {
@@ -236,6 +238,7 @@ function App() {
                 [ TOKEN REWARDS ACTIVATING SOON ]
               </div>
               <ShareButton
+                isPracticeMode={isPracticeMode}
                 dict={dict}
                 guesses={guesses}
                 targetWord={targetWord}

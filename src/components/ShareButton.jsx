@@ -6,7 +6,7 @@ import { useTelemetry } from '../hooks/useTelemetry';
 
 const { FiShare2, FiCheck, FiTwitter, FiDownload } = FiIcons;
 
-const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
+const ShareButton = ({ dict, guesses, targetWord, score, streak, isPracticeMode }) => {
   const [copied, setCopied] = useState(false);
   const [copiedInstead, setCopiedInstead] = useState(false);
   const { trackEvent } = useTelemetry();
@@ -27,7 +27,10 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
       emojiBoard += '\n';
     });
 
-    return `AXiM Cipher Decrypted! 🔓\nScore: ${score} | Streak: ${streak}🔥\n${emojiBoard}\nPlay at axim.us.com`;
+    const attempts = guesses.length >= 6 ? 'X' : guesses.length;
+    const header = isPracticeMode ? 'AXiM Practice Cipher' : 'AXiM Daily Cipher';
+
+    return `${header} ${attempts}/6\nScore: ${score}\n${emojiBoard.trim()}`;
   };
 
 
@@ -58,6 +61,7 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
         console.error('Failed to copy text: ', err);
+        alert('Clipboard access denied. Please manually copy your score!');
       }
     }
   };
@@ -81,6 +85,7 @@ const ShareButton = ({ dict, guesses, targetWord, score, streak }) => {
         setTimeout(() => setCopiedInstead(false), 3000);
       } catch (copyErr) {
         console.error('Fallback copy failed', copyErr);
+        alert('Clipboard access denied. Please manually copy your score!');
       }
     }
   };
