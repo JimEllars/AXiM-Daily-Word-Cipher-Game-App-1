@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Header from './components/Header';
 import GuessDistribution from './components/GuessDistribution';
 import StatsPanel from './components/StatsPanel';
@@ -6,11 +6,11 @@ import GameBoard from './components/GameBoard';
 import GameInput from './components/GameInput';
 import Keyboard from './components/Keyboard';
 import BadgesPanel from './components/BadgesPanel';
-import Leaderboard from './components/Leaderboard';
-import Instructions from './components/Instructions';
+const Leaderboard = lazy(() => import('./components/Leaderboard'));
+const Instructions = lazy(() => import('./components/Instructions'));
 import LoginButton from './components/LoginButton';
 import ShareButton from './components/ShareButton';
-import CRTOverlay from './components/layout/CRTOverlay';
+const CRTOverlay = lazy(() => import('./components/layout/CRTOverlay'));
 import ErrorBoundary from './components/layout/ErrorBoundary';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useTelemetry } from './hooks/useTelemetry';
@@ -127,8 +127,8 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameOver, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess]);
 
-  return (
-    <CRTOverlay>
+  const appContent = (
+    <>
       <div className="grid grid-rows-[auto_1fr_auto] min-h-[100dvh] w-full overflow-hidden">
         <Header
           dict={dict}
@@ -258,23 +258,41 @@ function App() {
         </div>
 
         {/* Modals */}
-        <Leaderboard 
-          isOpen={showLeaderboard} 
-          onClose={() => setShowLeaderboard(false)} 
-          dict={dict} 
-          walletAddress={walletAddress}
-        />
+        <Suspense fallback={null}>
+          <Leaderboard
+            isOpen={showLeaderboard}
+            onClose={() => setShowLeaderboard(false)}
+            dict={dict}
+            walletAddress={walletAddress}
+          />
+        </Suspense>
         
-        <Instructions 
-          isOpen={showInstructions} 
-          onClose={() => setShowInstructions(false)} 
-          dict={dict} 
-        />
+        <Suspense fallback={null}>
+          <Instructions
+            isOpen={showInstructions}
+            onClose={() => setShowInstructions(false)}
+            dict={dict}
+          />
+        </Suspense>
         <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
           <GuessDistribution dictionary={dict} />
         </div>
-</div>
-    </CRTOverlay>
+      </div>
+    </>
+  );
+
+  return (
+    <Suspense fallback={
+      <div className="relative min-h-[100dvh] h-[100dvh] w-full bg-[#0d0d13] overflow-y-auto flex flex-col">
+        <div className="relative z-10 flex flex-col items-center flex-1 h-full w-full">
+          {appContent}
+        </div>
+      </div>
+    }>
+      <CRTOverlay>
+        {appContent}
+      </CRTOverlay>
+    </Suspense>
   );
 }
 

@@ -1,0 +1,730 @@
+From 657ebf5b1e1e3d640380bb217a8874dc8b2c2b60 Mon Sep 17 00:00:00 2001
+From: "google-labs-jules[bot]"
+ <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date: Sun, 2 Aug 2026 23:03:44 +0000
+Subject: [PATCH] feat: Offline sync, RPC fallback, and lazy loading
+ optimizations
+
+---
+ fix_appContent.py            |  45 ++++++++++++++++
+ fix_import_task2.py          |  18 +++++++
+ fix_instructions_suspense.py |  19 +++++++
+ index.html                   |   3 +-
+ package-lock.json            |   4 +-
+ package.json                 |   4 +-
+ patch_app_task3.py           |  75 ++++++++++++++++++++++++++
+ patch_index_task3.py         |  14 +++++
+ patch_useGameEngine_task1.py | 100 +++++++++++++++++++++++++++++++++++
+ patch_useGameEngine_task2.py |  17 ++++++
+ patch_web3_task2.py          |  57 ++++++++++++++++++++
+ src/App.jsx                  |  56 +++++++++++++-------
+ src/config/web3.js           |  38 ++++++++++++-
+ src/hooks/useGameEngine.js   |  73 ++++++++++++++++++++-----
+ test_task1.js                |   4 ++
+ 15 files changed, 490 insertions(+), 37 deletions(-)
+ create mode 100644 fix_appContent.py
+ create mode 100644 fix_import_task2.py
+ create mode 100644 fix_instructions_suspense.py
+ create mode 100644 patch_app_task3.py
+ create mode 100644 patch_index_task3.py
+ create mode 100644 patch_useGameEngine_task1.py
+ create mode 100644 patch_useGameEngine_task2.py
+ create mode 100644 patch_web3_task2.py
+ create mode 100644 test_task1.js
+
+diff --git a/fix_appContent.py b/fix_appContent.py
+new file mode 100644
+index 0000000..289c368
+--- /dev/null
++++ b/fix_appContent.py
+@@ -0,0 +1,45 @@
++with open('src/App.jsx', 'r') as f:
++    content = f.read()
++
++# Let's wrap appContent in a fragment, because `<Instructions />` might be outside the main div?
++# Wait, `<Instructions` is just another component, but in the original file:
++# return (
++#   <CRTOverlay>
++#     <div className="grid ...">
++#       ...
++#       <Instructions />
++#       <div className="...">
++#         <GuessDistribution />
++#       </div>
++#     </div>
++#   </CRTOverlay>
++# )
++# Oh, it seems we replaced `<CRTOverlay>` and it closed before `</div>`?
++# Let's see line 277 and 278.
++# `277: </div>`
++# `278: </div>`
++# Ah, I replaced `</CRTOverlay>\n  );\n}` with `</div>\n  );\n` but the original had
++# `  </CRTOverlay>\n  );\n}`
++# Wait, look at line 278: error Parsing error: Adjacent JSX elements must be wrapped in an enclosing tag
++# Let's wrap appContent in `<>` and `</>` to be safe.
++
++search = 'const appContent = (\n      <div className="grid grid-rows-[auto_1fr_auto] min-h-[100dvh] w-full overflow-hidden">'
++replace = 'const appContent = (\n    <>\n      <div className="grid grid-rows-[auto_1fr_auto] min-h-[100dvh] w-full overflow-hidden">'
++content = content.replace(search, replace)
++
++search_end = """        <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
++          <GuessDistribution dictionary={dict} />
++        </div>
++</div>
++    </div>
++  );"""
++replace_end = """        <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
++          <GuessDistribution dictionary={dict} />
++        </div>
++      </div>
++    </>
++  );"""
++content = content.replace(search_end, replace_end)
++
++with open('src/App.jsx', 'w') as f:
++    f.write(content)
+diff --git a/fix_import_task2.py b/fix_import_task2.py
+new file mode 100644
+index 0000000..0c15cd9
+--- /dev/null
++++ b/fix_import_task2.py
+@@ -0,0 +1,18 @@
++with open('src/hooks/useGameEngine.js', 'r') as f:
++    content = f.read()
++
++# Fix static import
++search_import = "import { WEB3_CONFIG } from '../config/web3';"
++replace_import = "import { WEB3_CONFIG, getProvider } from '../config/web3';"
++content = content.replace(search_import, replace_import)
++
++# Fix usage
++search_usage = """          const { getProvider } = await import('../config/web3.js');
++          const provider = await getProvider(window.ethereum);"""
++replace_usage = """          const provider = await getProvider(window.ethereum);"""
++content = content.replace(search_usage, replace_usage)
++
++with open('src/hooks/useGameEngine.js', 'w') as f:
++    f.write(content)
++
++print("Fixed imports in useGameEngine.js")
+diff --git a/fix_instructions_suspense.py b/fix_instructions_suspense.py
+new file mode 100644
+index 0000000..dcc9c2d
+--- /dev/null
++++ b/fix_instructions_suspense.py
+@@ -0,0 +1,19 @@
++with open('src/App.jsx', 'r') as f:
++    content = f.read()
++
++search = """        <Instructions
++          isOpen={showInstructions}
++          onClose={() => setShowInstructions(false)}
++          dict={dict}
++        />"""
++replace = """        <Suspense fallback={null}>
++          <Instructions
++            isOpen={showInstructions}
++            onClose={() => setShowInstructions(false)}
++            dict={dict}
++          />
++        </Suspense>"""
++content = content.replace(search, replace)
++
++with open('src/App.jsx', 'w') as f:
++    f.write(content)
+diff --git a/index.html b/index.html
+index df7ff11..2fd7e6f 100644
+--- a/index.html
++++ b/index.html
+@@ -7,7 +7,8 @@
+     <title>AXiM Daily Word Cipher</title>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
++    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
++    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"></noscript>
+
+     <link rel="manifest" href="%BASE_URL%manifest.json" />
+     <meta name="theme-color" content="#00ff66" />
+diff --git a/package-lock.json b/package-lock.json
+index 9886a76..423753c 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -28,8 +28,8 @@
+         "autoprefixer": "^10.4.20",
+         "eslint": "^9.9.1",
+         "eslint-plugin-react": "^7.37.5",
+-        "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+-        "eslint-plugin-react-refresh": "^0.4.11",
++        "eslint-plugin-react-hooks": "^5.2.0",
++        "eslint-plugin-react-refresh": "^0.4.26",
+         "globals": "^15.9.0",
+         "playwright": "^1.62.1",
+         "postcss": "^8.4.49",
+diff --git a/package.json b/package.json
+index aab9100..c4acd83 100644
+--- a/package.json
++++ b/package.json
+@@ -35,8 +35,8 @@
+     "autoprefixer": "^10.4.20",
+     "eslint": "^9.9.1",
+     "eslint-plugin-react": "^7.37.5",
+-    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+-    "eslint-plugin-react-refresh": "^0.4.11",
++    "eslint-plugin-react-hooks": "^5.2.0",
++    "eslint-plugin-react-refresh": "^0.4.26",
+     "globals": "^15.9.0",
+     "playwright": "^1.62.1",
+     "postcss": "^8.4.49",
+diff --git a/patch_app_task3.py b/patch_app_task3.py
+new file mode 100644
+index 0000000..d5b0b3e
+--- /dev/null
++++ b/patch_app_task3.py
+@@ -0,0 +1,75 @@
++with open('src/App.jsx', 'r') as f:
++    content = f.read()
++
++# React imports
++if "import React, { useState, useEffect" in content and "Suspense" not in content:
++    content = content.replace("import React, { useState, useEffect } from 'react';", "import React, { useState, useEffect, Suspense, lazy } from 'react';")
++
++# Replace imports for Leaderboard and Instructions
++content = content.replace("import Leaderboard from './components/Leaderboard';", "const Leaderboard = lazy(() => import('./components/Leaderboard'));")
++content = content.replace("import Instructions from './components/Instructions';", "const Instructions = lazy(() => import('./components/Instructions'));")
++
++# Add Suspense boundary for Leaderboard
++search_leaderboard = "<Leaderboard \n          isOpen={showLeaderboard} \n          onClose={() => setShowLeaderboard(false)} \n          dict={dict} \n          walletAddress={walletAddress}\n        />"
++replace_leaderboard = """<Suspense fallback={null}>
++          <Leaderboard
++            isOpen={showLeaderboard}
++            onClose={() => setShowLeaderboard(false)}
++            dict={dict}
++            walletAddress={walletAddress}
++          />
++        </Suspense>"""
++content = content.replace(search_leaderboard, replace_leaderboard)
++
++# We can find `<Leaderboard` more safely:
++import re
++content = re.sub(r'(<Leaderboard[^>]*/>)', r'<Suspense fallback={null}>\1</Suspense>', content)
++content = re.sub(r'(<Instructions[^>]*/>)', r'<Suspense fallback={null}>\1</Suspense>', content)
++
++# Now, lazy load CRTOverlay.
++# To avoid the entire tree suspending, let's redefine CRTOverlay locally, extracting the heavy effects into a lazily-loaded component.
++# Actually, the requirement asks to lazy load `<CRTOverlay />`.
++# "In src/App.jsx, implement React Suspense and lazy() for heavy, non-critical components (like the <CRTOverlay /> or the <MintModal />) so they do not block the primary thread from rendering the game board instantly."
++# "The transition to lazy() loading in Task 3 must include a visually unobtrusive fallback in the <Suspense fallback={...}> block to prevent jarring UI jumps."
++
++# What if we lazy load CRTOverlay and render the children in the fallback?
++# `const CRTOverlay = lazy(() => import('./components/layout/CRTOverlay'));`
++# `const AppContent = (props) => ( <div className="grid ...">{...}</div> )`
++# Then:
++# <Suspense fallback={<div className="relative min-h-[100dvh] h-[100dvh] w-full bg-[#0d0d13] overflow-y-auto flex flex-col"><div className="relative z-10 flex flex-col items-center flex-1 h-full w-full">{appContent}</div></div>}>
++#   <CRTOverlay>{appContent}</CRTOverlay>
++# </Suspense>
++
++# Let's see how `return (` looks in App.jsx.
++search_return = "return (\n    <CRTOverlay>"
++content = content.replace(search_return, "const appContent = (")
++
++# And close appContent at the end:
++search_end = "    </CRTOverlay>\n  );\n}"
++replace_end = """    </div>
++  );
++
++  return (
++    <Suspense fallback={
++      <div className="relative min-h-[100dvh] h-[100dvh] w-full bg-[#0d0d13] overflow-y-auto flex flex-col">
++        <div className="relative z-10 flex flex-col items-center flex-1 h-full w-full">
++          {appContent}
++        </div>
++      </div>
++    }>
++      <CRTOverlay>
++        {appContent}
++      </CRTOverlay>
++    </Suspense>
++  );
++}"""
++
++content = content.replace("    </CRTOverlay>\n  );\n}", replace_end)
++content = content.replace("import CRTOverlay from './components/layout/CRTOverlay';", "const CRTOverlay = lazy(() => import('./components/layout/CRTOverlay'));")
++# Also need to remove the first `<CRTOverlay>` that followed `return (`
++content = content.replace("const appContent = (\n    <CRTOverlay>\n      <div", "const appContent = (\n      <div")
++
++with open('src/App.jsx', 'w') as f:
++    f.write(content)
++
++print("Patched App.jsx")
+diff --git a/patch_index_task3.py b/patch_index_task3.py
+new file mode 100644
+index 0000000..aa92010
+--- /dev/null
++++ b/patch_index_task3.py
+@@ -0,0 +1,14 @@
++with open('index.html', 'r') as f:
++    content = f.read()
++
++# Add rel="preload" and font-display: swap to Google Fonts link
++search_font = """<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">"""
++replace_font = """<link rel="preload" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
++    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"></noscript>"""
++
++content = content.replace(search_font, replace_font)
++
++with open('index.html', 'w') as f:
++    f.write(content)
++
++print("Patched index.html")
+diff --git a/patch_useGameEngine_task1.py b/patch_useGameEngine_task1.py
+new file mode 100644
+index 0000000..28987cb
+--- /dev/null
++++ b/patch_useGameEngine_task1.py
+@@ -0,0 +1,100 @@
++import re
++
++with open('src/hooks/useGameEngine.js', 'r') as f:
++    content = f.read()
++
++# Replace the fetch call in submitGuess with try/catch and offline sync logic
++search_block = """        if (walletAddress) {
++          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
++            method: 'POST',
++            headers: {
++              'Content-Type': 'application/json'
++            },
++            body: JSON.stringify({
++              wallet_address: walletAddress,
++              lifetime_practice_score: updatedLifetimeScore
++            })
++          }).catch(err => console.error('Failed to sync lifetime score', err));
++        }"""
++
++replace_block = """        if (walletAddress) {
++          const syncPayload = {
++            wallet_address: walletAddress,
++            lifetime_practice_score: updatedLifetimeScore
++          };
++          try {
++            fetch(import.meta.env.BASE_URL + 'api/user/sync', {
++              method: 'POST',
++              headers: {
++                'Content-Type': 'application/json'
++              },
++              body: JSON.stringify(syncPayload)
++            }).then(response => {
++              if (!response.ok) throw new Error('Sync response not ok');
++            }).catch(err => {
++              console.error('[TELEMETRY] Failed to sync lifetime score, queuing for offline sync.', err);
++              localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
++            });
++          } catch (err) {
++            console.error('[TELEMETRY] Exception syncing lifetime score, queuing for offline sync.', err);
++            localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
++          }
++        }"""
++
++content = content.replace(search_block, replace_block)
++
++# Add useEffect for online event to handle pending sync
++# Find the end of evaluateBadges useCallback (it's around line 150 maybe? No, let's just put it before return at the end of the hook)
++# Actually let's just place it near the top of the hook, after initial state declarations.
++# Let's search for `useEffect(() => {` and add it before the first one.
++
++search_effect_block = """  useEffect(() => {
++    if (hasWon) {"""
++
++replace_effect_block = """  // Offline Sync Queue
++  useEffect(() => {
++    const handleOnline = () => {
++      const pendingSyncStr = localStorage.getItem('axim_pending_sync');
++      if (pendingSyncStr) {
++        try {
++          const pendingSync = JSON.parse(pendingSyncStr);
++          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
++            method: 'POST',
++            headers: {
++              'Content-Type': 'application/json'
++            },
++            body: JSON.stringify(pendingSync)
++          }).then(response => {
++            if (response.ok) {
++              localStorage.removeItem('axim_pending_sync');
++              console.log('[TELEMETRY] Successfully synced pending offline data.');
++            }
++          }).catch(err => {
++            console.error('[TELEMETRY] Retry sync failed again.', err);
++          });
++        } catch (err) {
++          console.error('Error parsing pending sync data', err);
++        }
++      }
++    };
++
++    window.addEventListener('online', handleOnline);
++    // Also try on mount in case they came online while closed
++    if (navigator.onLine) {
++      handleOnline();
++    }
++
++    return () => {
++      window.removeEventListener('online', handleOnline);
++    };
++  }, []);
++
++  useEffect(() => {
++    if (hasWon) {"""
++
++content = content.replace(search_effect_block, replace_effect_block)
++
++with open('src/hooks/useGameEngine.js', 'w') as f:
++    f.write(content)
++
++print("Patched useGameEngine.js")
+diff --git a/patch_useGameEngine_task2.py b/patch_useGameEngine_task2.py
+new file mode 100644
+index 0000000..efeb574
+--- /dev/null
++++ b/patch_useGameEngine_task2.py
+@@ -0,0 +1,17 @@
++with open('src/hooks/useGameEngine.js', 'r') as f:
++    content = f.read()
++
++# Replace provider instantiation
++search_block = """          const provider = new ethers.BrowserProvider(window.ethereum);
++          const CONTRACT_ADDRESS = WEB3_CONFIG.CONTRACT_ADDRESS;"""
++
++replace_block = """          const { getProvider } = await import('../config/web3.js');
++          const provider = await getProvider(window.ethereum);
++          const CONTRACT_ADDRESS = WEB3_CONFIG.CONTRACT_ADDRESS;"""
++
++content = content.replace(search_block, replace_block)
++
++with open('src/hooks/useGameEngine.js', 'w') as f:
++    f.write(content)
++
++print("Patched useGameEngine.js for task 2")
+diff --git a/patch_web3_task2.py b/patch_web3_task2.py
+new file mode 100644
+index 0000000..e528d46
+--- /dev/null
++++ b/patch_web3_task2.py
+@@ -0,0 +1,57 @@
++import re
++
++with open('src/config/web3.js', 'r') as f:
++    content = f.read()
++
++# Add getProvider function logic with timeout and fallback
++new_content = """import { ethers } from 'ethers';
++
++export const WEB3_CONFIG = {
++  CHAIN_ID: import.meta.env.VITE_CHAIN_ID || 11155111, // Sepolia default
++  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x1234567890123456789012345678901234567890',
++  EXPLORER_URL: import.meta.env.VITE_EXPLORER_URL || 'https://sepolia.etherscan.io',
++  RPC_URLS: [
++    import.meta.env.VITE_PRIMARY_RPC_URL || 'https://rpc.sepolia.org',
++    import.meta.env.VITE_FALLBACK_RPC_URL || 'https://fallback.sepolia.rpc'
++  ]
++};
++
++export const getProvider = async (ethereumProvider) => {
++  const primaryRpc = WEB3_CONFIG.RPC_URLS[0];
++  const fallbackRpc = WEB3_CONFIG.RPC_URLS[1];
++
++  if (ethereumProvider) {
++    try {
++      const browserProvider = new ethers.BrowserProvider(ethereumProvider);
++      // Wait for network with a 3 second timeout
++      await Promise.race([
++        browserProvider.getNetwork(),
++        new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout')), 3000))
++      ]);
++      return browserProvider;
++    } catch (error) {
++      console.warn('[TELEMETRY] Primary Web3 provider failed or timed out. Falling back to secondary RPC.', error);
++      // Fallback if browser provider fails (e.g. wrong network or rpc issue)
++      return new ethers.JsonRpcProvider(fallbackRpc);
++    }
++  }
++
++  // No ethereum provider, try primary then fallback
++  try {
++    const jsonProvider = new ethers.JsonRpcProvider(primaryRpc);
++    await Promise.race([
++      jsonProvider.getNetwork(),
++      new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout')), 3000))
++    ]);
++    return jsonProvider;
++  } catch (error) {
++    console.warn('[TELEMETRY] Primary RPC failed or timed out. Falling back to secondary RPC.', error);
++    return new ethers.JsonRpcProvider(fallbackRpc);
++  }
++};
++"""
++
++with open('src/config/web3.js', 'w') as f:
++    f.write(new_content)
++
++print("Patched web3.js")
+diff --git a/src/App.jsx b/src/App.jsx
+index d96961d..65f0893 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,4 +1,4 @@
+-import React, { useState, useEffect } from 'react';
++import React, { useState, useEffect, Suspense, lazy } from 'react';
+ import Header from './components/Header';
+ import GuessDistribution from './components/GuessDistribution';
+ import StatsPanel from './components/StatsPanel';
+@@ -6,11 +6,11 @@ import GameBoard from './components/GameBoard';
+ import GameInput from './components/GameInput';
+ import Keyboard from './components/Keyboard';
+ import BadgesPanel from './components/BadgesPanel';
+-import Leaderboard from './components/Leaderboard';
+-import Instructions from './components/Instructions';
++const Leaderboard = lazy(() => import('./components/Leaderboard'));
++const Instructions = lazy(() => import('./components/Instructions'));
+ import LoginButton from './components/LoginButton';
+ import ShareButton from './components/ShareButton';
+-import CRTOverlay from './components/layout/CRTOverlay';
++const CRTOverlay = lazy(() => import('./components/layout/CRTOverlay'));
+ import ErrorBoundary from './components/layout/ErrorBoundary';
+ import { useGameEngine } from './hooks/useGameEngine';
+ import { useTelemetry } from './hooks/useTelemetry';
+@@ -127,8 +127,8 @@ function App() {
+     return () => window.removeEventListener('keydown', handleKeyDown);
+   }, [gameOver, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess]);
+
+-  return (
+-    <CRTOverlay>
++  const appContent = (
++    <>
+       <div className="grid grid-rows-[auto_1fr_auto] min-h-[100dvh] w-full overflow-hidden">
+         <Header
+           dict={dict}
+@@ -258,23 +258,41 @@ function App() {
+         </div>
+
+         {/* Modals */}
+-        <Leaderboard
+-          isOpen={showLeaderboard}
+-          onClose={() => setShowLeaderboard(false)}
+-          dict={dict}
+-          walletAddress={walletAddress}
+-        />
++        <Suspense fallback={null}>
++          <Leaderboard
++            isOpen={showLeaderboard}
++            onClose={() => setShowLeaderboard(false)}
++            dict={dict}
++            walletAddress={walletAddress}
++          />
++        </Suspense>
+
+-        <Instructions
+-          isOpen={showInstructions}
+-          onClose={() => setShowInstructions(false)}
+-          dict={dict}
+-        />
++        <Suspense fallback={null}>
++          <Instructions
++            isOpen={showInstructions}
++            onClose={() => setShowInstructions(false)}
++            dict={dict}
++          />
++        </Suspense>
+         <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
+           <GuessDistribution dictionary={dict} />
+         </div>
+-</div>
+-    </CRTOverlay>
++      </div>
++    </>
++  );
++
++  return (
++    <Suspense fallback={
++      <div className="relative min-h-[100dvh] h-[100dvh] w-full bg-[#0d0d13] overflow-y-auto flex flex-col">
++        <div className="relative z-10 flex flex-col items-center flex-1 h-full w-full">
++          {appContent}
++        </div>
++      </div>
++    }>
++      <CRTOverlay>
++        {appContent}
++      </CRTOverlay>
++    </Suspense>
+   );
+ }
+
+diff --git a/src/config/web3.js b/src/config/web3.js
+index 0da3059..cde6875 100644
+--- a/src/config/web3.js
++++ b/src/config/web3.js
+@@ -1,3 +1,5 @@
++import { ethers } from 'ethers';
++
+ export const WEB3_CONFIG = {
+   CHAIN_ID: import.meta.env.VITE_CHAIN_ID || 11155111, // Sepolia default
+   CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x1234567890123456789012345678901234567890',
+@@ -6,4 +8,38 @@ export const WEB3_CONFIG = {
+     import.meta.env.VITE_PRIMARY_RPC_URL || 'https://rpc.sepolia.org',
+     import.meta.env.VITE_FALLBACK_RPC_URL || 'https://fallback.sepolia.rpc'
+   ]
+-};
+\ No newline at end of file
++};
++
++export const getProvider = async (ethereumProvider) => {
++  const primaryRpc = WEB3_CONFIG.RPC_URLS[0];
++  const fallbackRpc = WEB3_CONFIG.RPC_URLS[1];
++
++  if (ethereumProvider) {
++    try {
++      const browserProvider = new ethers.BrowserProvider(ethereumProvider);
++      // Wait for network with a 3 second timeout
++      await Promise.race([
++        browserProvider.getNetwork(),
++        new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout')), 3000))
++      ]);
++      return browserProvider;
++    } catch (error) {
++      console.warn('[TELEMETRY] Primary Web3 provider failed or timed out. Falling back to secondary RPC.', error);
++      // Fallback if browser provider fails (e.g. wrong network or rpc issue)
++      return new ethers.JsonRpcProvider(fallbackRpc);
++    }
++  }
++
++  // No ethereum provider, try primary then fallback
++  try {
++    const jsonProvider = new ethers.JsonRpcProvider(primaryRpc);
++    await Promise.race([
++      jsonProvider.getNetwork(),
++      new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout')), 3000))
++    ]);
++    return jsonProvider;
++  } catch (error) {
++    console.warn('[TELEMETRY] Primary RPC failed or timed out. Falling back to secondary RPC.', error);
++    return new ethers.JsonRpcProvider(fallbackRpc);
++  }
++};
+diff --git a/src/hooks/useGameEngine.js b/src/hooks/useGameEngine.js
+index b9cdafc..196c6dd 100644
+--- a/src/hooks/useGameEngine.js
++++ b/src/hooks/useGameEngine.js
+@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+ import { useTelemetry } from './useTelemetry';
+ import { FALLBACK_WORDS, getDailyWord, getRandomPracticeWord } from '../constants/words';
+ import { ethers } from 'ethers';
+-import { WEB3_CONFIG } from '../config/web3';
++import { WEB3_CONFIG, getProvider } from '../config/web3';
+
+ const MAX_SCORE = 1000;
+ const WORD_LENGTH = 5;
+@@ -186,6 +186,44 @@ export const useGameEngine = (walletAddress) => {
+   }, []);
+
+   // Dynamic Document Title
++  // Offline Sync Queue
++  useEffect(() => {
++    const handleOnline = () => {
++      const pendingSyncStr = localStorage.getItem('axim_pending_sync');
++      if (pendingSyncStr) {
++        try {
++          const pendingSync = JSON.parse(pendingSyncStr);
++          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
++            method: 'POST',
++            headers: {
++              'Content-Type': 'application/json'
++            },
++            body: JSON.stringify(pendingSync)
++          }).then(response => {
++            if (response.ok) {
++              localStorage.removeItem('axim_pending_sync');
++              console.log('[TELEMETRY] Successfully synced pending offline data.');
++            }
++          }).catch(err => {
++            console.error('[TELEMETRY] Retry sync failed again.', err);
++          });
++        } catch (err) {
++          console.error('Error parsing pending sync data', err);
++        }
++      }
++    };
++
++    window.addEventListener('online', handleOnline);
++    // Also try on mount in case they came online while closed
++    if (navigator.onLine) {
++      handleOnline();
++    }
++
++    return () => {
++      window.removeEventListener('online', handleOnline);
++    };
++  }, []);
++
+   useEffect(() => {
+     if (hasWon) {
+       document.title = "AXiM Cipher | Decrypted 🔓";
+@@ -255,7 +293,7 @@ export const useGameEngine = (walletAddress) => {
+
+       if (walletAddress && window.ethereum) {
+         try {
+-          const provider = new ethers.BrowserProvider(window.ethereum);
++          const provider = await getProvider(window.ethereum);
+           const CONTRACT_ADDRESS = WEB3_CONFIG.CONTRACT_ADDRESS;
+           const ABI = ['function lastClaimDay(address) view returns (uint256)'];
+           const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+@@ -374,16 +412,27 @@ export const useGameEngine = (walletAddress) => {
+         localStorage.setItem('axim_lifetime_practice_score', updatedLifetimeScore);
+
+         if (walletAddress) {
+-          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
+-            method: 'POST',
+-            headers: {
+-              'Content-Type': 'application/json'
+-            },
+-            body: JSON.stringify({
+-              wallet_address: walletAddress,
+-              lifetime_practice_score: updatedLifetimeScore
+-            })
+-          }).catch(err => console.error('Failed to sync lifetime score', err));
++          const syncPayload = {
++            wallet_address: walletAddress,
++            lifetime_practice_score: updatedLifetimeScore
++          };
++          try {
++            fetch(import.meta.env.BASE_URL + 'api/user/sync', {
++              method: 'POST',
++              headers: {
++                'Content-Type': 'application/json'
++              },
++              body: JSON.stringify(syncPayload)
++            }).then(response => {
++              if (!response.ok) throw new Error('Sync response not ok');
++            }).catch(err => {
++              console.error('[TELEMETRY] Failed to sync lifetime score, queuing for offline sync.', err);
++              localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
++            });
++          } catch (err) {
++            console.error('[TELEMETRY] Exception syncing lifetime score, queuing for offline sync.', err);
++            localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
++          }
+         }
+       }
+
+diff --git a/test_task1.js b/test_task1.js
+new file mode 100644
+index 0000000..b3c2bc5
+--- /dev/null
++++ b/test_task1.js
+@@ -0,0 +1,4 @@
++const { test, expect } = require('@playwright/test');
++
++// Simple sanity check that the build isn't broken
++// Playwright tests will be more complex, we just want to verify the file compiles via vite build
+--
+2.53.0
