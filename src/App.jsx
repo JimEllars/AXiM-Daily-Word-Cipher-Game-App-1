@@ -23,8 +23,39 @@ import SafeIcon from './common/SafeIcon';
 
 const { FiBarChart2, FiInfo } = FiIcons;
 
+
+function DelayedFallback({ delay = 300, children }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+  return show ? children : null;
+}
+
+
+function useNetworkStatus() {
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOnline;
+}
+
 function App() {
   const { trackEvent } = useTelemetry();
+  const isOnline = useNetworkStatus();
   const [language, setLanguage] = useState('en');
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -130,6 +161,19 @@ function App() {
 
   const appContent = (
     <>
+
+      <AnimatePresence>
+        {!isOnline && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-yellow-600/90 text-black font-mono font-bold border-2 border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.5)] rounded-sm"
+          >
+            [ OFFLINE MODE: Progress Saved Locally ]
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="grid grid-rows-[auto_1fr_auto] min-h-[100dvh] w-full overflow-hidden">
         <Header
           dict={dict}
@@ -268,9 +312,11 @@ function App() {
 
         {/* Modals */}
         <Suspense fallback={
-          <div className="flex justify-center p-4">
-            <span className="animate-pulse text-green-400 font-mono">[ LOADING ASSETS... ]</span>
-          </div>
+          <DelayedFallback delay={300}>
+            <div className="flex justify-center p-4">
+              <span className="animate-pulse text-green-400 font-mono">[ LOADING ASSETS... ]</span>
+            </div>
+          </DelayedFallback>
         }>
           <Leaderboard
             isOpen={showLeaderboard}
@@ -281,9 +327,11 @@ function App() {
         </Suspense>
         
         <Suspense fallback={
-          <div className="flex justify-center p-4">
-            <span className="animate-pulse text-green-400 font-mono">[ LOADING ASSETS... ]</span>
-          </div>
+          <DelayedFallback delay={300}>
+            <div className="flex justify-center p-4">
+              <span className="animate-pulse text-green-400 font-mono">[ LOADING ASSETS... ]</span>
+            </div>
+          </DelayedFallback>
         }>
           <Instructions
             isOpen={showInstructions}
@@ -302,11 +350,13 @@ function App() {
 
   return (
     <Suspense fallback={
+      <DelayedFallback delay={300}>
       <div className="relative min-h-[100dvh] h-[100dvh] w-full bg-[#0d0d13] overflow-y-auto flex flex-col">
         <div className="relative z-10 flex flex-col items-center flex-1 h-full w-full">
           {appContent}
         </div>
       </div>
+      </DelayedFallback>
     }>
       <CRTOverlay>
         {appContent}
