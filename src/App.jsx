@@ -29,6 +29,7 @@ function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [walletAddress, setWalletAddress] = useState(null);
+  const [showStats, setShowStats] = useState(false);
   
   // const targetWord = getDailyWord(); // Moved to useGameEngine
   const dict = i18n[language];
@@ -254,6 +255,14 @@ function App() {
           title={dict.badgesTitle} 
         />
 
+        <div className="w-full flex justify-center mt-4 pb-4">
+          <button
+            onClick={() => setShowStats(!showStats)}
+            className="px-4 py-2 border border-gray-600 text-gray-400 hover:text-white hover:border-white font-mono text-xs transition-colors bg-transparent uppercase"
+          >
+            {showStats ? '[ HIDE STATS ]' : '[ VIEW STATS ]'}
+          </button>
+        </div>
         </div>
         </div>
 
@@ -282,9 +291,11 @@ function App() {
             dict={dict}
           />
         </Suspense>
-        <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
-          <GuessDistribution dictionary={dict} />
-        </div>
+        {showStats && (
+          <div className="w-full mt-auto opacity-75 pb-safe pb-[env(safe-area-inset-bottom)]">
+            <GuessDistribution dictionary={dict} />
+          </div>
+        )}
       </div>
     </>
   );

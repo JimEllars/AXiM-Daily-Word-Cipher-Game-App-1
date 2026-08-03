@@ -147,7 +147,7 @@ const LoginButton = ({ dict, address, setAddress }) => {
               onClick={connectEmail}
               className="flex items-center gap-2 px-4 py-2 bg-transparent text-white hover:bg-neon-pink/10 hover:text-neon-pink font-mono text-xs transition-colors w-full text-left"
             >
-              <SafeIcon icon={FiMail} /> Login with Email
+              <SafeIcon icon={FiMail} /> Login with AXiM SSO (Email)
             </button>
             <button
               onClick={connectWeb3}
