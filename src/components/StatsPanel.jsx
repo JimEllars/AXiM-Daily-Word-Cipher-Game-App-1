@@ -10,16 +10,16 @@ const StatsPanel = ({ score, streak, lifetimePracticeScore, dictionary }) => {
     >
       <div className="flex justify-around w-full">
         <div className="flex flex-col items-center">
-          <span className="text-gray-400 text-xs mb-1 uppercase">{dictionary.score}</span>
+          <span className="text-gray-400 text-xs mb-1 uppercase">Score</span>
           <span className="font-bold text-white">{score}</span>
         </div>
         <div className="flex flex-col items-center">
-          <span className="text-gray-400 text-xs mb-1 uppercase">{dictionary.streak}</span>
+          <span className="text-gray-400 text-xs mb-1 uppercase">Daily Streak</span>
           <span className="font-bold text-neon-pink">{streak} 🔥</span>
         </div>
         {lifetimePracticeScore !== undefined && (
           <div className="flex flex-col items-center">
-            <span className="text-gray-400 text-xs mb-1 uppercase">Practice Score</span>
+            <span className="text-gray-400 text-xs mb-1 uppercase">Lifetime Practice Score</span>
             <span className="font-bold text-neon-blue">{lifetimePracticeScore}</span>
           </div>
         )}
