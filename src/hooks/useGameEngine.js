@@ -322,6 +322,34 @@ export const useGameEngine = (walletAddress) => {
     checkMintStatus();
   }, [walletAddress]);
 
+
+  // Offline Sync Flush (Edge Case Hardening)
+  useEffect(() => {
+    const flushPendingSync = async () => {
+      const pendingSyncStr = localStorage.getItem('axim_pending_sync');
+      if (navigator.onLine && pendingSyncStr) {
+        try {
+          const syncPayload = JSON.parse(pendingSyncStr);
+          const response = await fetch(import.meta.env.BASE_URL + 'api/user/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(syncPayload)
+          });
+
+          if (response.ok) {
+            localStorage.removeItem('axim_pending_sync');
+            trackEvent('OFFLINE_SYNC_FLUSHED', { type: 'score_sync' });
+          }
+        } catch (err) {
+          console.error('[TELEMETRY] Failed to flush pending sync on mount', err);
+        }
+      }
+    };
+    flushPendingSync();
+  }, [trackEvent]);
+
   // Load persistent streak from local storage
   useEffect(() => {
     const savedStreak = localStorage.getItem('axim_streak');
@@ -428,10 +456,12 @@ export const useGameEngine = (walletAddress) => {
             }).catch(err => {
               console.error('[TELEMETRY] Failed to sync lifetime score, queuing for offline sync.', err);
               localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
+              trackEvent('OFFLINE_SYNC_QUEUED', { type: 'score_sync' });
             });
           } catch (err) {
             console.error('[TELEMETRY] Exception syncing lifetime score, queuing for offline sync.', err);
             localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
+            trackEvent('OFFLINE_SYNC_QUEUED', { type: 'score_sync' });
           }
         }
       }

@@ -258,7 +258,11 @@ function App() {
         </div>
 
         {/* Modals */}
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="flex justify-center p-4">
+            <span className="animate-pulse text-green-400 font-mono">[ LOADING ASSETS... ]</span>
+          </div>
+        }>
           <Leaderboard
             isOpen={showLeaderboard}
             onClose={() => setShowLeaderboard(false)}
@@ -267,7 +271,11 @@ function App() {
           />
         </Suspense>
         
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="flex justify-center p-4">
+            <span className="animate-pulse text-green-400 font-mono">[ LOADING ASSETS... ]</span>
+          </div>
+        }>
           <Instructions
             isOpen={showInstructions}
             onClose={() => setShowInstructions(false)}
