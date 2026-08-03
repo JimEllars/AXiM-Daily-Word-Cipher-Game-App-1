@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTelemetry } from './useTelemetry';
 import { FALLBACK_WORDS, getDailyWord, getRandomPracticeWord } from '../constants/words';
 import { ethers } from 'ethers';
-import { WEB3_CONFIG } from '../config/web3';
+import { WEB3_CONFIG, getProvider } from '../config/web3';
 
 const MAX_SCORE = 1000;
 const WORD_LENGTH = 5;
@@ -186,6 +186,44 @@ export const useGameEngine = (walletAddress) => {
   }, []);
 
   // Dynamic Document Title
+  // Offline Sync Queue
+  useEffect(() => {
+    const handleOnline = () => {
+      const pendingSyncStr = localStorage.getItem('axim_pending_sync');
+      if (pendingSyncStr) {
+        try {
+          const pendingSync = JSON.parse(pendingSyncStr);
+          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(pendingSync)
+          }).then(response => {
+            if (response.ok) {
+              localStorage.removeItem('axim_pending_sync');
+              console.log('[TELEMETRY] Successfully synced pending offline data.');
+            }
+          }).catch(err => {
+            console.error('[TELEMETRY] Retry sync failed again.', err);
+          });
+        } catch (err) {
+          console.error('Error parsing pending sync data', err);
+        }
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    // Also try on mount in case they came online while closed
+    if (navigator.onLine) {
+      handleOnline();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
   useEffect(() => {
     if (hasWon) {
       document.title = "AXiM Cipher | Decrypted 🔓";
@@ -255,7 +293,7 @@ export const useGameEngine = (walletAddress) => {
 
       if (walletAddress && window.ethereum) {
         try {
-          const provider = new ethers.BrowserProvider(window.ethereum);
+          const provider = await getProvider(window.ethereum);
           const CONTRACT_ADDRESS = WEB3_CONFIG.CONTRACT_ADDRESS;
           const ABI = ['function lastClaimDay(address) view returns (uint256)'];
           const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
@@ -374,16 +412,27 @@ export const useGameEngine = (walletAddress) => {
         localStorage.setItem('axim_lifetime_practice_score', updatedLifetimeScore);
 
         if (walletAddress) {
-          fetch(import.meta.env.BASE_URL + 'api/user/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              wallet_address: walletAddress,
-              lifetime_practice_score: updatedLifetimeScore
-            })
-          }).catch(err => console.error('Failed to sync lifetime score', err));
+          const syncPayload = {
+            wallet_address: walletAddress,
+            lifetime_practice_score: updatedLifetimeScore
+          };
+          try {
+            fetch(import.meta.env.BASE_URL + 'api/user/sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(syncPayload)
+            }).then(response => {
+              if (!response.ok) throw new Error('Sync response not ok');
+            }).catch(err => {
+              console.error('[TELEMETRY] Failed to sync lifetime score, queuing for offline sync.', err);
+              localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
+            });
+          } catch (err) {
+            console.error('[TELEMETRY] Exception syncing lifetime score, queuing for offline sync.', err);
+            localStorage.setItem('axim_pending_sync', JSON.stringify(syncPayload));
+          }
         }
       }
       

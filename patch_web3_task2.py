@@ -1,4 +1,10 @@
-import { ethers } from 'ethers';
+import re
+
+with open('src/config/web3.js', 'r') as f:
+    content = f.read()
+
+# Add getProvider function logic with timeout and fallback
+new_content = """import { ethers } from 'ethers';
 
 export const WEB3_CONFIG = {
   CHAIN_ID: import.meta.env.VITE_CHAIN_ID || 11155111, // Sepolia default
@@ -43,3 +49,9 @@ export const getProvider = async (ethereumProvider) => {
     return new ethers.JsonRpcProvider(fallbackRpc);
   }
 };
+"""
+
+with open('src/config/web3.js', 'w') as f:
+    f.write(new_content)
+
+print("Patched web3.js")
