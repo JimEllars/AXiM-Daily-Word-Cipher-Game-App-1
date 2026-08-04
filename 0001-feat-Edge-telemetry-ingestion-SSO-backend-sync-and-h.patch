@@ -1,0 +1,248 @@
+From 0115f8f24711ab0a8dd862be9a470b19107c4602 Mon Sep 17 00:00:00 2001
+From: "google-labs-jules[bot]"
+ <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date: Tue, 4 Aug 2026 23:32:23 +0000
+Subject: [PATCH] feat: Edge telemetry ingestion, SSO backend sync, and health
+ indicator
+
+- Added POST /api/telemetry to src/worker.js for telemetry storage
+- Added GET /api/health to src/worker.js for network edge health pings
+- Updated POST /api/user/sync to support Authorization Bearer token/SSO auth
+- Updated src/hooks/useTelemetry.js to ensure non-blocking payload sends via new schema
+- Added 60s periodic ping for Edge Health to src/App.jsx and UI indicator
+---
+ src/App.jsx               | 30 ++++++++++++-
+ src/hooks/useTelemetry.js | 16 ++++++-
+ src/worker.js             | 89 +++++++++++++++++++++++++++++----------
+ 3 files changed, 109 insertions(+), 26 deletions(-)
+
+diff --git a/src/App.jsx b/src/App.jsx
+index c5e966c..93e9011 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -61,6 +61,7 @@ function App() {
+   const [showInstructions, setShowInstructions] = useState(false);
+   const [walletAddress, setWalletAddress] = useState(null);
+   const [showStats, setShowStats] = useState(false);
++  const [edgeHealth, setEdgeHealth] = useState(null);
+
+   // const targetWord = getDailyWord(); // Moved to useGameEngine
+   const dict = i18n[language];
+@@ -98,6 +99,28 @@ function App() {
+     }
+   }, []);
+
++  // Edge health ping
++  useEffect(() => {
++    const pingHealth = async () => {
++      try {
++        const start = Date.now();
++        const res = await fetch(`${import.meta.env.BASE_URL}api/health`);
++        if (res.ok) {
++          const ms = Date.now() - start;
++          setEdgeHealth(ms);
++        } else {
++          setEdgeHealth('OFFLINE');
++        }
++      } catch (e) {
++        setEdgeHealth('OFFLINE');
++      }
++    };
++
++    pingHealth();
++    const interval = setInterval(pingHealth, 60000);
++    return () => clearInterval(interval);
++  }, []);
++
+   // Eager connection check
+   useEffect(() => {
+     const handleAccountsChanged = (accounts) => {
+@@ -299,7 +322,12 @@ function App() {
+           title={dict.badgesTitle}
+         />
+
+-        <div className="w-full flex justify-center mt-4 pb-4">
++        <div className="w-full flex justify-center mt-4 pb-4 items-center gap-4">
++          {edgeHealth !== null && (
++            <div className="font-mono text-[10px] text-green-400 opacity-70 border border-green-400/30 px-2 py-1 uppercase tracking-wider">
++              [ EDGE: {typeof edgeHealth === 'number' ? `${edgeHealth}ms` : edgeHealth} ]
++            </div>
++          )}
+           <button
+             onClick={() => setShowStats(!showStats)}
+             className="px-4 py-2 border border-gray-600 text-gray-400 hover:text-white hover:border-white font-mono text-xs transition-colors bg-transparent uppercase"
+diff --git a/src/hooks/useTelemetry.js b/src/hooks/useTelemetry.js
+index 437da2a..9f1e960 100644
+--- a/src/hooks/useTelemetry.js
++++ b/src/hooks/useTelemetry.js
+@@ -8,7 +8,13 @@ export const useTelemetry = () => {
+
+     console.log(`[AXiM Telemetry] ${eventName} | Data:`, JSON.stringify(payload));
+
+-    const eventPayload = { eventName, payload };
++    const eventPayload = {
++      event_name: eventName,
++      user_id: payload.user_id || payload.wallet_address || "anonymous",
++      is_practice: payload.practiceMode ? 1 : 0,
++      timestamp: Date.now(),
++      metadata: payload
++    };
+
+     // Async fetch wrapper that fails silently
+     (async () => {
+@@ -36,7 +42,13 @@ export const useTelemetry = () => {
+           queue.push(eventPayload);
+
+           if (eventName !== 'OFFLINE_SYNC_QUEUED') {
+-            queue.push({ eventName: 'OFFLINE_SYNC_QUEUED', payload: { type: 'telemetry_sync' } });
++            queue.push({
++              event_name: 'OFFLINE_SYNC_QUEUED',
++              user_id: payload.user_id || payload.wallet_address || "anonymous",
++              is_practice: payload.practiceMode ? 1 : 0,
++              timestamp: Date.now(),
++              metadata: { type: 'telemetry_sync' }
++            });
+           }
+
+           localStorage.setItem('axim_telemetry_queue', JSON.stringify(queue));
+diff --git a/src/worker.js b/src/worker.js
+index 220e355..ba4ba14 100644
+--- a/src/worker.js
++++ b/src/worker.js
+@@ -55,6 +55,10 @@ const getLeaderboard = async (db, type) => {
+ };
+
+ const handleApiRequest = async (request, env, ctx, pathname) => {
++  if (pathname === "/api/health" && request.method === "GET") {
++    return json({ status: "ok", edge: "cloudflare", timestamp: Date.now() }, { headers: { "Cache-Control": "no-cache" } });
++  }
++
+   if (pathname === "/api/word/today" && request.method === "GET") {
+     const word = await getDailyWord(env.DB, getDayId());
+     return json(
+@@ -65,29 +69,43 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
+
+   if (pathname === "/api/telemetry" && request.method === "POST") {
+     const event = await request.json().catch(() => null);
+-    if (
+-      !event ||
+-      typeof event.eventName !== "string" ||
+-      event.eventName.length === 0 ||
+-      event.eventName.length > 100 ||
+-      typeof event.payload !== "object" ||
+-      event.payload === null
+-    ) {
++    if (!event) {
+       return json({ error: "Invalid telemetry event." }, { status: 400 });
+     }
++
++    // Support both old format (eventName, payload) and new format
++    let event_name = event.event_name || event.eventName;
++    let user_id = event.user_id || event.payload?.user_id || "anonymous";
++    let is_practice = event.is_practice !== undefined ? event.is_practice : (event.payload?.practiceMode ? 1 : 0);
++    let timestamp = event.timestamp || Date.now();
++    let metadata = event.metadata ? JSON.stringify(event.metadata) : (event.payload ? JSON.stringify(event.payload) : "{}");
++
++    if (typeof event_name !== "string" || event_name.length === 0 || event_name.length > 100) {
++      return json({ error: "Invalid event_name." }, { status: 400 });
++    }
+
+-    const payload = JSON.stringify(event.payload);
+-    if (payload.length > 8192) {
+-      return json({ error: "Telemetry payload is too large." }, { status: 413 });
++    if (metadata.length > 8192) {
++      return json({ error: "Telemetry metadata is too large." }, { status: 413 });
+     }
+
+     ctx.waitUntil(
+-      env.DB
+-        .prepare(
+-          "INSERT INTO telemetry_logs (event_name, payload, created_at) VALUES (?, ?, ?)",
+-        )
+-        .bind(event.eventName, payload, Date.now())
+-        .run(),
++      (async () => {
++        try {
++          // Attempt to create TelemetryEvents if it doesn't exist
++          await env.DB.prepare(
++            "CREATE TABLE IF NOT EXISTS TelemetryEvents (id INTEGER PRIMARY KEY AUTOINCREMENT, event_name TEXT NOT NULL, user_id TEXT, is_practice INTEGER, timestamp INTEGER, metadata TEXT)"
++          ).run();
++
++          await env.DB.prepare(
++            "INSERT INTO TelemetryEvents (event_name, user_id, is_practice, timestamp, metadata) VALUES (?, ?, ?, ?, ?)"
++          ).bind(event_name, user_id, is_practice ? 1 : 0, timestamp, metadata).run();
++        } catch (err) {
++          // Fallback to telemetry_logs
++          await env.DB.prepare(
++            "INSERT INTO telemetry_logs (event_name, payload, created_at) VALUES (?, ?, ?)"
++          ).bind(event_name, metadata, timestamp).run();
++        }
++      })()
+     );
+     return json({ status: "accepted" }, { status: 202 });
+   }
+@@ -96,18 +114,43 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
+     try {
+       const data = await request.json();
+
++      const authHeader = request.headers.get("Authorization");
++      let token = data.sso_token;
++      if (authHeader && authHeader.startsWith("Bearer ")) {
++        token = authHeader.substring(7);
++      }
++
++      let sso_user_id = null;
++      let sso_email = null;
++      if (token) {
++        try {
++          const parts = token.split('.');
++          if (parts.length === 3) {
++            const payload = JSON.parse(atob(parts[1]));
++            sso_user_id = payload.user_id || payload.sub;
++            sso_email = payload.email;
++          } else {
++            sso_user_id = token;
++          }
++        } catch(e) {
++          sso_user_id = token;
++        }
++      }
++
+       // Explicitly ignore legacy time-based payload fields
+       const { time_elapsed, timer, ...sanitizedData } = data;
+
+-      const { wallet_address, score, streak, lifetime_practice_score } = sanitizedData;
++      let { wallet_address, score, streak, lifetime_practice_score, badges } = sanitizedData;
++
++      const identifier = sso_user_id || wallet_address;
+
+-      if (!wallet_address) {
+-        return json({ error: "Missing wallet_address" }, { status: 400 });
++      if (!identifier) {
++        return json({ error: "Missing identifier (wallet_address or sso_token)" }, { status: 400 });
+       }
+
+       const existing = await env.DB.prepare(
+         "SELECT * FROM UserStates WHERE wallet_address = ?"
+-      ).bind(wallet_address).first();
++      ).bind(identifier).first();
+
+       const finalScore = score !== undefined ? score : (existing ? existing.score : 0);
+       const finalStreak = streak !== undefined ? streak : (existing ? existing.streak : 0);
+@@ -116,12 +159,12 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
+       try {
+         await env.DB.prepare(
+           "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played, lifetime_practice_score) VALUES (?, ?, ?, ?, ?)"
+-        ).bind(wallet_address, finalScore, finalStreak, Date.now(), finalPracticeScore).run();
++        ).bind(identifier, finalScore, finalStreak, Date.now(), finalPracticeScore).run();
+       } catch (e) {
+         // Fallback if lifetime_practice_score column does not exist
+         await env.DB.prepare(
+           "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played) VALUES (?, ?, ?, ?)"
+-        ).bind(wallet_address, finalScore, finalStreak, Date.now()).run();
++        ).bind(identifier, finalScore, finalStreak, Date.now()).run();
+       }
+
+       return json({ status: "success" });
+--
+2.53.0

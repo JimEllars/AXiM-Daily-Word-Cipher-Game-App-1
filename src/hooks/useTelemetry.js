@@ -8,7 +8,13 @@ export const useTelemetry = () => {
 
     console.log(`[AXiM Telemetry] ${eventName} | Data:`, JSON.stringify(payload));
 
-    const eventPayload = { eventName, payload };
+    const eventPayload = {
+      event_name: eventName,
+      user_id: payload.user_id || payload.wallet_address || "anonymous",
+      is_practice: payload.practiceMode ? 1 : 0,
+      timestamp: Date.now(),
+      metadata: payload
+    };
 
     // Async fetch wrapper that fails silently
     (async () => {
@@ -36,7 +42,13 @@ export const useTelemetry = () => {
           queue.push(eventPayload);
 
           if (eventName !== 'OFFLINE_SYNC_QUEUED') {
-            queue.push({ eventName: 'OFFLINE_SYNC_QUEUED', payload: { type: 'telemetry_sync' } });
+            queue.push({
+              event_name: 'OFFLINE_SYNC_QUEUED',
+              user_id: payload.user_id || payload.wallet_address || "anonymous",
+              is_practice: payload.practiceMode ? 1 : 0,
+              timestamp: Date.now(),
+              metadata: { type: 'telemetry_sync' }
+            });
           }
 
           localStorage.setItem('axim_telemetry_queue', JSON.stringify(queue));
