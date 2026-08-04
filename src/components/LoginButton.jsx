@@ -132,7 +132,7 @@ const LoginButton = ({ dict, address, setAddress }) => {
         }`}
       >
         <SafeIcon icon={connecting ? FiCpu : (address ? FiUser : FiLink)} className={connecting ? 'animate-spin' : ''} />
-        {connecting ? 'LINKING...' : address ? `Hi, ${formatAddress(address)}` : '[ LOGIN ]'}
+        {connecting ? 'LINKING...' : address ? `Hi, ${formatAddress(address)}` : 'Login'}
       </button>
 
       <AnimatePresence>
@@ -147,7 +147,7 @@ const LoginButton = ({ dict, address, setAddress }) => {
               onClick={connectEmail}
               className="flex items-center gap-2 px-4 py-2 bg-transparent text-white hover:bg-neon-pink/10 hover:text-neon-pink font-mono text-xs transition-colors w-full text-left"
             >
-              <SafeIcon icon={FiMail} /> Login with AXiM SSO (Email)
+              <SafeIcon icon={FiMail} /> Login with AXiM SSO
             </button>
             <button
               onClick={connectWeb3}
