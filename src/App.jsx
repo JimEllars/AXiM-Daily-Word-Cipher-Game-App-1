@@ -61,6 +61,7 @@ function App() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [walletAddress, setWalletAddress] = useState(null);
   const [showStats, setShowStats] = useState(false);
+  const [edgeHealth, setEdgeHealth] = useState(null);
   
   // const targetWord = getDailyWord(); // Moved to useGameEngine
   const dict = i18n[language];
@@ -96,6 +97,28 @@ function App() {
       setShowInstructions(true);
       localStorage.setItem('axim_visited', 'true');
     }
+  }, []);
+
+  // Edge health ping
+  useEffect(() => {
+    const pingHealth = async () => {
+      try {
+        const start = Date.now();
+        const res = await fetch(`${import.meta.env.BASE_URL}api/health`);
+        if (res.ok) {
+          const ms = Date.now() - start;
+          setEdgeHealth(ms);
+        } else {
+          setEdgeHealth('OFFLINE');
+        }
+      } catch (e) {
+        setEdgeHealth('OFFLINE');
+      }
+    };
+
+    pingHealth();
+    const interval = setInterval(pingHealth, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   // Eager connection check
@@ -299,7 +322,12 @@ function App() {
           title={dict.badgesTitle} 
         />
 
-        <div className="w-full flex justify-center mt-4 pb-4">
+        <div className="w-full flex justify-center mt-4 pb-4 items-center gap-4">
+          {edgeHealth !== null && (
+            <div className="font-mono text-[10px] text-green-400 opacity-70 border border-green-400/30 px-2 py-1 uppercase tracking-wider">
+              [ EDGE: {typeof edgeHealth === 'number' ? `${edgeHealth}ms` : edgeHealth} ]
+            </div>
+          )}
           <button
             onClick={() => setShowStats(!showStats)}
             className="px-4 py-2 border border-gray-600 text-gray-400 hover:text-white hover:border-white font-mono text-xs transition-colors bg-transparent uppercase"

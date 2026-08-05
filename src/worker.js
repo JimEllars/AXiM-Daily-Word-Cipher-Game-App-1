@@ -55,6 +55,10 @@ const getLeaderboard = async (db, type) => {
 };
 
 const handleApiRequest = async (request, env, ctx, pathname) => {
+  if (pathname === "/api/health" && request.method === "GET") {
+    return json({ status: "ok", edge: "cloudflare", timestamp: Date.now() }, { headers: { "Cache-Control": "no-cache" } });
+  }
+
   if (pathname === "/api/word/today" && request.method === "GET") {
     const word = await getDailyWord(env.DB, getDayId());
     return json(
@@ -65,29 +69,43 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
 
   if (pathname === "/api/telemetry" && request.method === "POST") {
     const event = await request.json().catch(() => null);
-    if (
-      !event ||
-      typeof event.eventName !== "string" ||
-      event.eventName.length === 0 ||
-      event.eventName.length > 100 ||
-      typeof event.payload !== "object" ||
-      event.payload === null
-    ) {
+    if (!event) {
       return json({ error: "Invalid telemetry event." }, { status: 400 });
     }
 
-    const payload = JSON.stringify(event.payload);
-    if (payload.length > 8192) {
-      return json({ error: "Telemetry payload is too large." }, { status: 413 });
+    // Support both old format (eventName, payload) and new format
+    let event_name = event.event_name || event.eventName;
+    let user_id = event.user_id || event.payload?.user_id || "anonymous";
+    let is_practice = event.is_practice !== undefined ? event.is_practice : (event.payload?.practiceMode ? 1 : 0);
+    let timestamp = event.timestamp || Date.now();
+    let metadata = event.metadata ? JSON.stringify(event.metadata) : (event.payload ? JSON.stringify(event.payload) : "{}");
+
+    if (typeof event_name !== "string" || event_name.length === 0 || event_name.length > 100) {
+      return json({ error: "Invalid event_name." }, { status: 400 });
+    }
+
+    if (metadata.length > 8192) {
+      return json({ error: "Telemetry metadata is too large." }, { status: 413 });
     }
 
     ctx.waitUntil(
-      env.DB
-        .prepare(
-          "INSERT INTO telemetry_logs (event_name, payload, created_at) VALUES (?, ?, ?)",
-        )
-        .bind(event.eventName, payload, Date.now())
-        .run(),
+      (async () => {
+        try {
+          // Attempt to create TelemetryEvents if it doesn't exist
+          await env.DB.prepare(
+            "CREATE TABLE IF NOT EXISTS TelemetryEvents (id INTEGER PRIMARY KEY AUTOINCREMENT, event_name TEXT NOT NULL, user_id TEXT, is_practice INTEGER, timestamp INTEGER, metadata TEXT)"
+          ).run();
+
+          await env.DB.prepare(
+            "INSERT INTO TelemetryEvents (event_name, user_id, is_practice, timestamp, metadata) VALUES (?, ?, ?, ?, ?)"
+          ).bind(event_name, user_id, is_practice ? 1 : 0, timestamp, metadata).run();
+        } catch (err) {
+          // Fallback to telemetry_logs
+          await env.DB.prepare(
+            "INSERT INTO telemetry_logs (event_name, payload, created_at) VALUES (?, ?, ?)"
+          ).bind(event_name, metadata, timestamp).run();
+        }
+      })()
     );
     return json({ status: "accepted" }, { status: 202 });
   }
@@ -96,18 +114,43 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     try {
       const data = await request.json();
 
+      const authHeader = request.headers.get("Authorization");
+      let token = data.sso_token;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      }
+
+      let sso_user_id = null;
+      let sso_email = null;
+      if (token) {
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            sso_user_id = payload.user_id || payload.sub;
+            sso_email = payload.email;
+          } else {
+            sso_user_id = token;
+          }
+        } catch(e) {
+          sso_user_id = token;
+        }
+      }
+
       // Explicitly ignore legacy time-based payload fields
       const { time_elapsed, timer, ...sanitizedData } = data;
 
-      const { wallet_address, score, streak, lifetime_practice_score } = sanitizedData;
+      let { wallet_address, score, streak, lifetime_practice_score, badges } = sanitizedData;
 
-      if (!wallet_address) {
-        return json({ error: "Missing wallet_address" }, { status: 400 });
+      const identifier = sso_user_id || wallet_address;
+
+      if (!identifier) {
+        return json({ error: "Missing identifier (wallet_address or sso_token)" }, { status: 400 });
       }
 
       const existing = await env.DB.prepare(
         "SELECT * FROM UserStates WHERE wallet_address = ?"
-      ).bind(wallet_address).first();
+      ).bind(identifier).first();
 
       const finalScore = score !== undefined ? score : (existing ? existing.score : 0);
       const finalStreak = streak !== undefined ? streak : (existing ? existing.streak : 0);
@@ -116,12 +159,12 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
       try {
         await env.DB.prepare(
           "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played, lifetime_practice_score) VALUES (?, ?, ?, ?, ?)"
-        ).bind(wallet_address, finalScore, finalStreak, Date.now(), finalPracticeScore).run();
+        ).bind(identifier, finalScore, finalStreak, Date.now(), finalPracticeScore).run();
       } catch (e) {
         // Fallback if lifetime_practice_score column does not exist
         await env.DB.prepare(
           "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played) VALUES (?, ?, ?, ?)"
-        ).bind(wallet_address, finalScore, finalStreak, Date.now()).run();
+        ).bind(identifier, finalScore, finalStreak, Date.now()).run();
       }
 
       return json({ status: "success" });
