@@ -1,3 +1,15 @@
+
+const handleAuthError = () => {
+  localStorage.removeItem('axim_sso_token');
+  localStorage.removeItem('axim_global_session');
+  document.cookie = "axim_global_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  window.dispatchEvent(new Event('axim_sso_expired'));
+
+  // Custom toast dispatch
+  const event = new CustomEvent('axim_toast', { detail: '[ SESSION EXPIRED: PLEASE RE-LOGIN ]' });
+  window.dispatchEvent(event);
+};
+
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTelemetry } from './useTelemetry';
 import { FALLBACK_WORDS, getDailyWord, getRandomPracticeWord } from '../constants/words';
@@ -338,6 +350,10 @@ export const useGameEngine = (walletAddress) => {
             body: JSON.stringify(syncPayload)
           });
 
+          if (response.status === 401) {
+            handleAuthError();
+          }
+
           if (response.ok) {
             localStorage.removeItem('axim_pending_sync');
             trackEvent('OFFLINE_SYNC_FLUSHED', { type: 'score_sync' });
@@ -452,6 +468,9 @@ export const useGameEngine = (walletAddress) => {
               },
               body: JSON.stringify(syncPayload)
             }).then(response => {
+              if (response.status === 401) {
+                handleAuthError();
+              }
               if (!response.ok) throw new Error('Sync response not ok');
             }).catch(err => {
               console.error('[TELEMETRY] Failed to sync lifetime score, queuing for offline sync.', err);

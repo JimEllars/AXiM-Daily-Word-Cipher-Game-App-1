@@ -14,6 +14,7 @@ const CRTOverlay = lazy(() => import('./components/layout/CRTOverlay'));
 import ErrorBoundary from './components/layout/ErrorBoundary';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useTelemetry } from './hooks/useTelemetry';
+
 import { i18n } from './constants/i18n';
 import { useAudio } from './hooks/useAudio';
 // import { getDailyWord } from './constants/words';
@@ -62,6 +63,16 @@ function App() {
   const [walletAddress, setWalletAddress] = useState(null);
   const [showStats, setShowStats] = useState(false);
   const [edgeHealth, setEdgeHealth] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  useEffect(() => {
+    const handleToast = (e) => {
+      setToastMessage(e.detail);
+      setTimeout(() => setToastMessage(null), 3000);
+    };
+    window.addEventListener('axim_toast', handleToast);
+    return () => window.removeEventListener('axim_toast', handleToast);
+  }, []);
   
   // const targetWord = getDailyWord(); // Moved to useGameEngine
   const dict = i18n[language];
@@ -185,6 +196,18 @@ function App() {
   const appContent = (
     <>
 
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-red-600/90 text-white font-mono font-bold border-2 border-red-400 shadow-[0_0_10px_rgba(220,38,38,0.5)] rounded-sm"
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {!isOnline && (
           <motion.div

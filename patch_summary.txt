@@ -1,1 +1,5 @@
-0001-feat-Edge-telemetry-ingestion-SSO-backend-sync-and-h.patch
+# Patch Summary
+Completed Sprint #47 Tasks:
+1. Implemented IP-based rate limiting in src/worker.js for /api/telemetry (60 req/min) and /api/user/sync (20 req/min).
+2. Added schema validation for /api/telemetry payload in src/worker.js.
+3. Handled 401 Unauthorized errors in src/hooks/useGameEngine.js, removing tokens on expiration and showing a warning toast UI in App.jsx and un-setting global user in LoginButton.jsx.
