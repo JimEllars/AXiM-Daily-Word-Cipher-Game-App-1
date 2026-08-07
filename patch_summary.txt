@@ -1,13 +1,13 @@
-Sprint 47 - Edge Rate Limiting, Telemetry Validation & SSO Token Lifecycle
+Sprint #47 Deliverables Summary:
 
-1. Cloudflare Worker Rate Limiting (`src/worker.js`):
-   - Validated that the in-memory token-bucket limits `POST /api/telemetry` to 60 requests/min and `POST /api/user/sync` to 20 requests/min, returning HTTP 429 correctly.
+TASK 1: Cloudflare Worker Rate Limiting & Client Toast
+- Rate-limiting (token bucket/counter in memory) was already verified in src/worker.js for both `/api/telemetry` (max 60 req/min) and `/api/user/sync` (max 20 req/min). It correctly returns 429 when exceeded.
+- Updated `src/App.jsx` with a global `window.fetch` override. Now catching 429 status codes globally to dispatch an `axim_toast` event containing the exact message `[ 429: RATE LIMIT EXCEEDED - RETRYING SHORTLY ]`.
+- Ensured the toast auto-dismisses strictly after 3 seconds in `src/App.jsx`, utilizing a `timeoutId` and `clearTimeout` to prevent race conditions.
 
-2. Telemetry Payload Schema Validation (`src/worker.js`):
-   - Enforced 2KB payload size limit by checking content-length and raw text length.
-   - Prevented D1 database exhaustion from malformed blobs safely by rejecting invalid/bloated requests with HTTP 400.
+TASK 2: Telemetry Payload Schema Validation
+- The `src/worker.js` file was audited, and the validation checks for `event_name` (string, max 64 chars), `user_id` (string, max 128 chars), `timestamp` (integer), `is_practice` (boolean/number mapped to boolean), and overall payload limit (max 2048 bytes) were confirmed to correctly return `400 Bad Request` safely, preventing unhandled exceptions.
 
-3. Client-Side 401 Auto-Recovery (`src/hooks/useGameEngine.js`, `src/components/LoginButton.jsx`):
-   - Caught HTTP 401 Unauthorized responses inside `useGameEngine.js`.
-   - Restored `handleAuthError()` upon 401 which clears SSO tokens, triggers `axim_sso_expired` to revert the UI, and dispatches an `axim_toast` showing `[ SESSION EXPIRED: PLEASE RE-LOGIN ]`.
-   - Preserved active puzzle board state and logic seamlessly avoiding page reloads or interruption.
+TASK 3: Client-Side SSO Token Lifecycle & 401 Auto-Recovery
+- In `src/hooks/useGameEngine.js`, a pre-existing 401 check inside `syncStateWithBackend` correctly dispatches an `axim_sso_expired` event and removes `axim_sso_token` + `axim_global_session`. I verified this triggers the expected custom event `[ SESSION EXPIRED: PLEASE RE-LOGIN ]` and doesn't wipe `gameState`.
+- `src/components/LoginButton.jsx` was audited to confirm it effectively listens for `axim_sso_expired` on the window and removes `globalUser`, reverting the UI to the unauthenticated "Login" state.
