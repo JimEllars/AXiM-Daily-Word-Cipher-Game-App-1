@@ -1,5 +1,8 @@
-# Patch Summary
-Completed Sprint #47 Tasks:
-1. Implemented IP-based rate limiting in src/worker.js for /api/telemetry (60 req/min) and /api/user/sync (20 req/min).
-2. Added schema validation for /api/telemetry payload in src/worker.js.
-3. Handled 401 Unauthorized errors in src/hooks/useGameEngine.js, removing tokens on expiration and showing a warning toast UI in App.jsx and un-setting global user in LoginButton.jsx.
+Sprint #48: Dynamic Word Lengths 3-6, Seasonal Vocabulary, & Continuous Credit Loop
+
+- Created `WORDS_3` to `WORDS_6` and `SEASONAL_WORDS` in `src/constants/words.js`.
+- Refactored `getDailyWord` and `getRandomPracticeWord` to support length variations and seasonal contexts.
+- Updated `useGameEngine.js` to remove 5-letter hardcoding, and ensured safe local storage hydration. Added continuous credit sync loop and `nextPuzzle` alias logic.
+- Updated `GameBoard.jsx` grid sizes to handle 3-6 length targets, and introduced the seamless next cipher prompt `[ NEXT CIPHER → (+XX POINTS) ]` button logic dynamically.
+- Adapted `GameInput.jsx` and `App.jsx` keyboard listeners to rely on the active word length.
+- Pre-commit checks passed and build runs successfully.
