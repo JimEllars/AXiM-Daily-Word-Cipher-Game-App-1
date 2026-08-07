@@ -1,8 +1,13 @@
-Sprint #48: Dynamic Word Lengths 3-6, Seasonal Vocabulary, & Continuous Credit Loop
+Sprint 47 - Edge Rate Limiting, Telemetry Validation & SSO Token Lifecycle
 
-- Created `WORDS_3` to `WORDS_6` and `SEASONAL_WORDS` in `src/constants/words.js`.
-- Refactored `getDailyWord` and `getRandomPracticeWord` to support length variations and seasonal contexts.
-- Updated `useGameEngine.js` to remove 5-letter hardcoding, and ensured safe local storage hydration. Added continuous credit sync loop and `nextPuzzle` alias logic.
-- Updated `GameBoard.jsx` grid sizes to handle 3-6 length targets, and introduced the seamless next cipher prompt `[ NEXT CIPHER → (+XX POINTS) ]` button logic dynamically.
-- Adapted `GameInput.jsx` and `App.jsx` keyboard listeners to rely on the active word length.
-- Pre-commit checks passed and build runs successfully.
+1. Cloudflare Worker Rate Limiting (`src/worker.js`):
+   - Validated that the in-memory token-bucket limits `POST /api/telemetry` to 60 requests/min and `POST /api/user/sync` to 20 requests/min, returning HTTP 429 correctly.
+
+2. Telemetry Payload Schema Validation (`src/worker.js`):
+   - Enforced 2KB payload size limit by checking content-length and raw text length.
+   - Prevented D1 database exhaustion from malformed blobs safely by rejecting invalid/bloated requests with HTTP 400.
+
+3. Client-Side 401 Auto-Recovery (`src/hooks/useGameEngine.js`, `src/components/LoginButton.jsx`):
+   - Caught HTTP 401 Unauthorized responses inside `useGameEngine.js`.
+   - Restored `handleAuthError()` upon 401 which clears SSO tokens, triggers `axim_sso_expired` to revert the UI, and dispatches an `axim_toast` showing `[ SESSION EXPIRED: PLEASE RE-LOGIN ]`.
+   - Preserved active puzzle board state and logic seamlessly avoiding page reloads or interruption.
