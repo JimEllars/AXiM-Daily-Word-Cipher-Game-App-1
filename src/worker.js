@@ -135,7 +135,28 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
       return json({ error: "Rate limit exceeded. Retry shortly." }, { status: 429 });
     }
 
-    const event = await request.json().catch(() => null);
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 2048) {
+      return json({ error: "Payload too large." }, { status: 400 });
+    }
+
+    let rawBody = "";
+    try {
+      rawBody = await request.text();
+      if (rawBody.length > 2048) {
+        return json({ error: "Payload too large." }, { status: 400 });
+      }
+    } catch (e) {
+      return json({ error: "Invalid payload." }, { status: 400 });
+    }
+
+    let event = null;
+    try {
+      event = JSON.parse(rawBody);
+    } catch(e) {
+      return json({ error: "Invalid telemetry event." }, { status: 400 });
+    }
+
     if (!event) {
       return json({ error: "Invalid telemetry event." }, { status: 400 });
     }
