@@ -1,13 +1,15 @@
-Sprint #47 Deliverables Summary:
+# Sprint #48: KV Telemetry Aggregation, Client Retry Queue, & Latency Smoothing
 
-TASK 1: Cloudflare Worker Rate Limiting & Client Toast
-- Rate-limiting (token bucket/counter in memory) was already verified in src/worker.js for both `/api/telemetry` (max 60 req/min) and `/api/user/sync` (max 20 req/min). It correctly returns 429 when exceeded.
-- Updated `src/App.jsx` with a global `window.fetch` override. Now catching 429 status codes globally to dispatch an `axim_toast` event containing the exact message `[ 429: RATE LIMIT EXCEEDED - RETRYING SHORTLY ]`.
-- Ensured the toast auto-dismisses strictly after 3 seconds in `src/App.jsx`, utilizing a `timeoutId` and `clearTimeout` to prevent race conditions.
+## 1. Cloudflare KV Pre-Aggregated Metrics
+- Bound `TELEMETRY_KV` in `wrangler.jsonc` to store aggregated telemetry stats.
+- Updated `src/worker.js` `POST /api/telemetry` endpoint to safely write daily aggregated counter metrics (`total_events` & specific `event_name`) for zero-downtime metric collection.
+- Added a secure `GET /api/admin/metrics?date=YYYY-MM-DD` dashboard endpoint to easily query these counters directly from KV for ultra-fast load times.
 
-TASK 2: Telemetry Payload Schema Validation
-- The `src/worker.js` file was audited, and the validation checks for `event_name` (string, max 64 chars), `user_id` (string, max 128 chars), `timestamp` (integer), `is_practice` (boolean/number mapped to boolean), and overall payload limit (max 2048 bytes) were confirmed to correctly return `400 Bad Request` safely, preventing unhandled exceptions.
+## 2. Telemetry Client-Side Retry Queue
+- Rebuilt network error handling within `src/hooks/useTelemetry.js` to catch 429/5xx status drops explicitly.
+- Established a `axim_telemetry_retry_queue` in `localStorage`, cleanly capping at max 50 events.
+- Exposed and integrated a robust `flushRetryQueue()` callback to silently replay deferred analytics payloads upon detecting reliable edge connectivity.
 
-TASK 3: Client-Side SSO Token Lifecycle & 401 Auto-Recovery
-- In `src/hooks/useGameEngine.js`, a pre-existing 401 check inside `syncStateWithBackend` correctly dispatches an `axim_sso_expired` event and removes `axim_sso_token` + `axim_global_session`. I verified this triggers the expected custom event `[ SESSION EXPIRED: PLEASE RE-LOGIN ]` and doesn't wipe `gameState`.
-- `src/components/LoginButton.jsx` was audited to confirm it effectively listens for `axim_sso_expired` on the window and removes `globalUser`, reverting the UI to the unauthenticated "Login" state.
+## 3. Edge Latency Smoothing & Spike Telemetry
+- Converted standard `/api/health` network pings in `src/App.jsx` to an Exponential Moving Average (EMA) to prevent wild latency display fluctuations on the UI.
+- Deployed a threshold check that securely pushes a `LATENCY_SPIKE_DETECTED` event payload whenever a user experiences network degradation surpassing 500ms.
