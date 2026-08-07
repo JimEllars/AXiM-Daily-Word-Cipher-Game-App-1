@@ -54,6 +54,17 @@ function useNetworkStatus() {
   return isOnline;
 }
 
+
+const originalFetch = window.fetch;
+window.fetch = async function () {
+  const response = await originalFetch.apply(this, arguments);
+  if (response.status === 429) {
+    const event = new CustomEvent('axim_toast', { detail: '[ 429: RATE LIMIT EXCEEDED - RETRYING SHORTLY ]' });
+    window.dispatchEvent(event);
+  }
+  return response;
+};
+
 function App() {
   const { trackEvent } = useTelemetry();
   const isOnline = useNetworkStatus();
@@ -66,12 +77,17 @@ function App() {
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
+    let timeoutId;
     const handleToast = (e) => {
       setToastMessage(e.detail);
-      setTimeout(() => setToastMessage(null), 3000);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setToastMessage(null), 3000);
     };
     window.addEventListener('axim_toast', handleToast);
-    return () => window.removeEventListener('axim_toast', handleToast);
+    return () => {
+      window.removeEventListener('axim_toast', handleToast);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
   
   // const targetWord = getDailyWord(); // Moved to useGameEngine
