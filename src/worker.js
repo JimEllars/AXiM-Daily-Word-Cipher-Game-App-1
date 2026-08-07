@@ -87,11 +87,46 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     return json({ status: "ok", edge: "cloudflare", timestamp: Date.now() }, { headers: { "Cache-Control": "no-cache" } });
   }
 
+
+  if (pathname === "/api/hint/today" && request.method === "GET") {
+    const dayId = getDayId();
+    const word = await getDailyWord(env.DB, dayId);
+
+    let hint = "A crucial element in the network.";
+
+    try {
+      if (env.AI) {
+        const aiResponse = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+          messages: [
+            { role: 'system', content: `You are a cyberpunk AI terminal. The secret word today is ${word}. Generate a cryptic, 10-word maximum hint. Do not reveal the word.` }
+          ]
+        });
+        if (aiResponse && aiResponse.response) {
+          hint = aiResponse.response;
+        }
+      }
+    } catch (aiError) {
+      console.error("AI Error", aiError);
+    }
+
+    const now = new Date();
+    const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const secondsUntilMidnight = Math.floor((nextMidnight.getTime() - now.getTime()) / 1000);
+
+    return json(
+      { hint },
+      { headers: { "Cache-Control": `public, max-age=3600, s-maxage=${secondsUntilMidnight}` } },
+    );
+  }
+
   if (pathname === "/api/word/today" && request.method === "GET") {
     const word = await getDailyWord(env.DB, getDayId());
+    const now = new Date();
+    const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const secondsUntilMidnight = Math.floor((nextMidnight.getTime() - now.getTime()) / 1000);
     return json(
       { word },
-      { headers: { "Cache-Control": "public, max-age=300, s-maxage=300" } },
+      { headers: { "Cache-Control": `public, max-age=300, s-maxage=${secondsUntilMidnight}` } },
     );
   }
 

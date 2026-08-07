@@ -19,7 +19,7 @@ const TurnstileWidget = ({ onVerify }) => {
       if (window.turnstile && containerRef.current && !widgetId) {
         try {
           const id = window.turnstile.render(containerRef.current, {
-            sitekey: '1x00000000000000000000AA', // Dummy key for testing
+            sitekey: import.meta.env.VITE_TURNSTILE_SITEKEY || '1x00000000000000000000AA', // Use env variable with fallback
             callback: function(token) {
               onVerify(token);
             },

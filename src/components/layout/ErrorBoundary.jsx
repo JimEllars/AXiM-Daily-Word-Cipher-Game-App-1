@@ -25,7 +25,7 @@ class ErrorBoundary extends React.Component {
       };
 
       if (navigator.onLine) {
-        fetch('/api/telemetry', {
+        fetch(import.meta.env.BASE_URL + 'api/telemetry', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
