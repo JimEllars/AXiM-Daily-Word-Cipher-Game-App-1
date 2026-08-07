@@ -73,8 +73,16 @@ const LoginButton = ({ dict, address, setAddress }) => {
       }
     };
 
+    const handleSsoExpired = () => {
+      setGlobalUser(null);
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('axim_sso_expired', handleSsoExpired);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('axim_sso_expired', handleSsoExpired);
+    };
   }, []);
 
 
