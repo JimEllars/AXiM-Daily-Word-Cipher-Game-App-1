@@ -97,6 +97,7 @@ function App() {
     lifetimePracticeScore,
     isWiping,
     skipPracticeWord,
+    nextPuzzle,
     usedLetters
   } = useGameEngine(walletAddress);
 
@@ -179,11 +180,11 @@ function App() {
       playClick();
 
       if (key === 'Enter') {
-        if (currentGuess.length === 5) submitGuess(currentGuess);
+        if (currentGuess.length === (targetWord?.length || 5)) submitGuess(currentGuess);
       } else if (key === 'Backspace') {
         setCurrentGuess(prev => prev.slice(0, -1));
       } else if (/^[a-zA-Z]$/.test(key)) {
-        if (currentGuess.length < 5) {
+        if (currentGuess.length < (targetWord?.length || 5)) {
           setCurrentGuess(prev => prev + key.toUpperCase());
         }
       }
@@ -191,7 +192,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameOver, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess]);
+  }, [gameOver, showLeaderboard, showInstructions, currentGuess, submitGuess, setCurrentGuess, targetWord]);
 
   const appContent = (
     <>
@@ -279,23 +280,29 @@ function App() {
         <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0">
 
         <ErrorBoundary>
-        <GameBoard 
+                <GameBoard
           guesses={guesses} 
           currentGuess={currentGuess} 
           targetWord={targetWord} 
           onForfeit={forfeitGame}
           gameOver={gameOver}
           startPracticeGame={startPracticeGame}
+          isPracticeMode={isPracticeMode}
+          skipPracticeWord={skipPracticeWord}
+          isWiping={isWiping}
+          nextPuzzle={nextPuzzle}
+          hasWon={hasWon}
+          score={score}
         />
         </ErrorBoundary>
         </div>
 
-        <GameInput 
+                <GameInput
           currentGuess={currentGuess}
           setCurrentGuess={setCurrentGuess}
           submitGuess={submitGuess}
           dictionary={dict}
-
+          targetLength={targetWord?.length}
           disabled={gameOver}
         />
 
@@ -307,10 +314,10 @@ function App() {
           onKeyPress={(key) => {
             if (gameOver) return;
             if (key === 'ENTER') {
-              if (currentGuess.length === 5) submitGuess(currentGuess);
+              if (currentGuess.length === (targetWord?.length || 5)) submitGuess(currentGuess);
             } else if (key === 'BACKSPACE') {
               setCurrentGuess(prev => prev.slice(0, -1));
-            } else if (currentGuess.length < 5) {
+            } else if (currentGuess.length < (targetWord?.length || 5)) {
               setCurrentGuess(prev => prev + key);
             }
           }}

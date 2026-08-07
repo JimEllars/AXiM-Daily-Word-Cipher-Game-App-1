@@ -6,13 +6,14 @@ const GameInput = ({
   setCurrentGuess, 
   submitGuess, 
   dictionary, 
-  disabled 
+  disabled,
+  targetLength
 }) => {
   // Native input removed
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
-      if (currentGuess.length === 5) {
+      if (currentGuess.length === (targetLength || 5)) {
         submitGuess(currentGuess);
       } else {
         alert(dictionary.invalid);
@@ -27,7 +28,7 @@ const GameInput = ({
         whileHover={{ scale: disabled ? 1 : 1.05, filter: disabled ? "none" : "brightness(1.2)" }}
         whileTap={{ scale: disabled ? 1 : 0.95 }}
         onClick={() => {
-          if (currentGuess.length === 5) submitGuess(currentGuess);
+          if (currentGuess.length === (targetLength || 5)) submitGuess(currentGuess);
           else alert(dictionary.invalid);
         }}
         disabled={disabled}

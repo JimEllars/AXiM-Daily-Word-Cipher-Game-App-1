@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, startPracticeGame, isPracticeMode, skipPracticeWord, isWiping }) => {
+const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, startPracticeGame, isPracticeMode, skipPracticeWord, isWiping, nextPuzzle, hasWon, score }) => {
   const [hint, setHint] = useState(null);
   const [displayedHint, setDisplayedHint] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -178,7 +178,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
         {/* Current active row (only if not won/lost yet) */}
         {!gameOver && (
         <div className="flex gap-2">
-          {Array.from({ length: WORD_LENGTH }).map((_, colIdx) => {
+          {Array.from({ length: targetWord?.length || 5 }).map((_, colIdx) => {
             const letter = currentGuess[colIdx] || '';
             return renderTile(letter, null, colIdx);
           })}
@@ -230,7 +230,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
         </AnimatePresence>
 
         <AnimatePresence>
-          {gameOver && (
+          {gameOver && !isPracticeMode && (
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -239,6 +239,20 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
               className="py-2 px-4 border-2 border-neon-green text-neon-green font-cyber text-sm font-bold shadow-[0_0_10px_rgba(0,255,157,0.5),_0_0_20px_rgba(0,255,157,0.3)] hover:bg-neon-green hover:text-black transition-all"
             >
               [ PLAY AGAIN ]
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {gameOver && isPracticeMode && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              onClick={nextPuzzle}
+              className="py-2 px-4 border-2 border-neon-green text-neon-green font-cyber text-sm font-bold shadow-[0_0_10px_rgba(0,255,157,0.5),_0_0_20px_rgba(0,255,157,0.3)] hover:bg-neon-green hover:text-black transition-all"
+            >
+              [ NEXT CIPHER → (+{hasWon ? score : 0} POINTS) ]
             </motion.button>
           )}
         </AnimatePresence>

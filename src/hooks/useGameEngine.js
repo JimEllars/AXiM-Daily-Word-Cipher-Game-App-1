@@ -17,8 +17,6 @@ import { ethers } from 'ethers';
 import { WEB3_CONFIG, getProvider } from '../config/web3';
 
 const MAX_SCORE = 1000;
-const WORD_LENGTH = 5;
-
 const calculateScore = (attempts, isPracticeMode = false) => {
   if (isPracticeMode) {
     if (attempts <= 1) return 100;
@@ -375,6 +373,21 @@ export const useGameEngine = (walletAddress) => {
     setStreak(savedStreak ? parseInt(savedStreak) : 3);
   }, []);
 
+
+  // Session safety for length mismatch
+  useEffect(() => {
+    if (targetWord && guesses.length > 0) {
+      if (guesses[0].length !== targetWord.length) {
+        setGuesses([]);
+        setCurrentGuess('');
+        // Also clear local session since it's invalid
+        if (!isPracticeMode) {
+          localStorage.removeItem('axim_current_session');
+        }
+      }
+    }
+  }, [targetWord]);
+
   const startPracticeGame = useCallback(() => {
     setIsWiping(true);
     setTimeout(() => {
@@ -407,7 +420,7 @@ export const useGameEngine = (walletAddress) => {
   }, [isPracticeMode, targetWord, trackEvent]);
 
   const submitGuess = useCallback((guessStr) => {
-    if (gameOver || guessStr.length !== WORD_LENGTH) return false;
+    if (gameOver || guessStr.length !== targetWord.length) return false;
 
     const upperGuess = guessStr.toUpperCase();
     const newGuesses = [...guesses, upperGuess];
@@ -570,6 +583,7 @@ export const useGameEngine = (walletAddress) => {
     startPracticeGame,
     lifetimePracticeScore,
     isWiping,
-    skipPracticeWord
+    skipPracticeWord,
+    nextPuzzle: startPracticeGame
   };
 };
