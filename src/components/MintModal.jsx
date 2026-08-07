@@ -80,7 +80,7 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
 
     try {
       // 1. Fetch ECDSA signature from Cloudflare Worker
-      const response = await fetch('/api/game/submit', {
+      const response = await fetch(import.meta.env.BASE_URL + 'api/game/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ const MintModal = ({ score, time_elapsed, walletAddress, dictionary, onClose, se
             >
               SIGN & SUBMIT TX
             </button>
-            {status === 'idle' && (
+            {(status === 'idle' || status === 'error') && (
               <TurnstileWidget onVerify={(token) => {
                 trackEvent('TURNSTILE_CHALLENGE_PASSED', { tokenPrefix: token.substring(0, 10) });
                 setTurnstileToken(token);

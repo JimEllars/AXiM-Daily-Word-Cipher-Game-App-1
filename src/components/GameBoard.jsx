@@ -100,7 +100,7 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
 
   const executeFetchHint = async (token) => {
     try {
-      const response = await fetch('/api/hint/today', {
+      const response = await fetch(import.meta.env.BASE_URL + 'api/hint/today', {
         headers: {
           'X-Turnstile-Token': token
         }

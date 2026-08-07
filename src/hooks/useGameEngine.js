@@ -348,8 +348,9 @@ export const useGameEngine = (walletAddress) => {
             body: JSON.stringify(syncPayload)
           });
 
+          // Removed handleAuthError() to prevent disrupting active game sessions
           if (response.status === 401) {
-            handleAuthError();
+            console.warn("[TELEMETRY] Sync 401 Unauthorized - silently ignoring to prevent session disruption.");
           }
 
           if (response.ok) {
@@ -481,9 +482,10 @@ export const useGameEngine = (walletAddress) => {
               },
               body: JSON.stringify(syncPayload)
             }).then(response => {
-              if (response.status === 401) {
-                handleAuthError();
-              }
+              // Removed handleAuthError() to prevent disrupting active game sessions
+          if (response.status === 401) {
+            console.warn("[TELEMETRY] Sync 401 Unauthorized - silently ignoring to prevent session disruption.");
+          }
               if (!response.ok) throw new Error('Sync response not ok');
             }).catch(err => {
               console.error('[TELEMETRY] Failed to sync lifetime score, queuing for offline sync.', err);
