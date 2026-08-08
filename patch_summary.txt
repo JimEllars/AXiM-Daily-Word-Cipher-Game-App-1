@@ -1,4 +1,4 @@
-Sprint #51 Deliverables Completed:
-1. Admin Telemetry Edge Caching (src/worker.js): Added caches.default to GET /api/admin/summary to cache queries for 300 seconds and prevent D1 read exhaustion.
-2. Adaptive Health Ping Backoff & Network Recovery (src/App.jsx): Added failure tracking for the 60-second /api/health check. Three failures trigger a 120-second backoff and 'DEGRADED' UI state.
-3. Multi-Tab Game State Synchronization (src/hooks/useGameEngine.js): Expanded 'storage' listener to rehydrate 'axim_daily_state' or 'axim_practice_score' keys alongside the existing keys without reloading the page.
+Sprint #52 Deliverables Completed:
+1. Cloudflare D1 Query Execution Telemetry (src/worker.js): Wrapped D1 SQL calls inside `POST /api/user/sync` and `GET /api/admin/summary` with `performance.now()` timers. Slow queries (>100ms) construct `D1_QUERY_SLOW` events and are written asynchronously to `TELEMETRY_KV`.
+2. Web3 RPC Fallback Telemetry & Client Toast (src/config/web3.js, src/App.jsx): Dispatched `axim_rpc_fallback` in `web3.js` on fallback. Added listener in `App.jsx` to render auto-dismissing `[ NETWORK: RPC FALLBACK ACTIVE ]` toast and send `RPC_FALLBACK_TRIGGERED` telemetry event.
+3. PWA Service Worker Update Prompt (public/sw.js, src/App.jsx): Added `SKIP_WAITING` handler in `sw.js`. Listened for `updatefound` and `statechange` in `App.jsx` to render a sticky `[ SYSTEM UPDATE AVAILABLE ]` notification with `[ REBOOT TERMINAL ]` reload action.

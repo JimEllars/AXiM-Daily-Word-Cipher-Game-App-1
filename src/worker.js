@@ -115,9 +115,24 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     }
 
     try {
+
+      const select_start = performance.now();
       const { results } = await env.DB.prepare(
         "SELECT * FROM DailyTelemetrySummaries WHERE date >= ? AND date <= ? ORDER BY date DESC"
       ).bind(startDate, endDate).all();
+      const select_duration = performance.now() - select_start;
+
+      if (select_duration > 100 && env.TELEMETRY_KV) {
+        ctx.waitUntil(
+          env.TELEMETRY_KV.put(`alert:slow_query:${new Date().toISOString().split('T')[0]}:${Date.now()}`, JSON.stringify({
+            event_name: "D1_QUERY_SLOW",
+            duration_ms: select_duration,
+            route: "/api/admin/summary",
+            query_type: "SELECT"
+          }), { expirationTtl: 14 * 24 * 60 * 60 })
+        );
+      }
+
 
       const response = json({
         status: "success",
@@ -370,26 +385,65 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
         return json({ error: "Missing identifier (wallet_address or sso_token)" }, { status: 400 });
       }
 
+
+      const existing_start = performance.now();
       const existing = await env.DB.prepare(
         "SELECT * FROM UserStates WHERE wallet_address = ?"
       ).bind(identifier).first();
+      const existing_duration = performance.now() - existing_start;
+
+      if (existing_duration > 100 && env.TELEMETRY_KV) {
+        ctx.waitUntil(
+          env.TELEMETRY_KV.put(`alert:slow_query:${new Date().toISOString().split('T')[0]}:${Date.now()}`, JSON.stringify({
+            event_name: "D1_QUERY_SLOW",
+            duration_ms: existing_duration,
+            route: "/api/user/sync",
+            query_type: "SELECT"
+          }), { expirationTtl: 14 * 24 * 60 * 60 })
+        );
+      }
 
       const finalScore = score !== undefined ? score : (existing ? existing.score : 0);
       const finalStreak = streak !== undefined ? streak : (existing ? existing.streak : 0);
       const finalPracticeScore = lifetime_practice_score !== undefined ? lifetime_practice_score : (existing && existing.lifetime_practice_score !== undefined ? existing.lifetime_practice_score : 0);
 
       try {
+        const insert_start = performance.now();
         await env.DB.prepare(
           "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played, lifetime_practice_score) VALUES (?, ?, ?, ?, ?)"
         ).bind(identifier, finalScore, finalStreak, Date.now(), finalPracticeScore).run();
+        const insert_duration = performance.now() - insert_start;
+
+        if (insert_duration > 100 && env.TELEMETRY_KV) {
+          ctx.waitUntil(
+            env.TELEMETRY_KV.put(`alert:slow_query:${new Date().toISOString().split('T')[0]}:${Date.now()}`, JSON.stringify({
+              event_name: "D1_QUERY_SLOW",
+              duration_ms: insert_duration,
+              route: "/api/user/sync",
+              query_type: "INSERT_OR_REPLACE"
+            }), { expirationTtl: 14 * 24 * 60 * 60 })
+          );
+        }
       } catch (e) {
         // Fallback if lifetime_practice_score column does not exist
+        const fallback_start = performance.now();
         await env.DB.prepare(
           "INSERT OR REPLACE INTO UserStates (wallet_address, score, streak, last_played) VALUES (?, ?, ?, ?)"
         ).bind(identifier, finalScore, finalStreak, Date.now()).run();
-      }
+        const fallback_duration = performance.now() - fallback_start;
 
-      return json({ status: "success" });
+        if (fallback_duration > 100 && env.TELEMETRY_KV) {
+          ctx.waitUntil(
+            env.TELEMETRY_KV.put(`alert:slow_query:${new Date().toISOString().split('T')[0]}:${Date.now()}`, JSON.stringify({
+              event_name: "D1_QUERY_SLOW",
+              duration_ms: fallback_duration,
+              route: "/api/user/sync",
+              query_type: "INSERT_OR_REPLACE_FALLBACK"
+            }), { expirationTtl: 14 * 24 * 60 * 60 })
+          );
+        }
+      }
+return json({ status: "success" });
     } catch (error) {
       console.error(error);
       return json({ error: "Database operation failed" }, { status: 500 });
