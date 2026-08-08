@@ -66,7 +66,7 @@ window.fetch = async function () {
 };
 
 function App() {
-  const { trackEvent } = useTelemetry();
+  const { trackEvent, flushRetryQueue } = useTelemetry();
   const isOnline = useNetworkStatus();
   const [language, setLanguage] = useState('en');
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -135,7 +135,15 @@ function App() {
         const res = await fetch(`${import.meta.env.BASE_URL}api/health`);
         if (res.ok) {
           const ms = Date.now() - start;
-          setEdgeHealth(ms);
+          setEdgeHealth((prev) => {
+             const previous = typeof prev === 'number' ? prev : ms;
+             const smoothedLatency = Math.round((ms * 0.3) + (previous * 0.7));
+             if (smoothedLatency > 500) {
+                 trackEvent('LATENCY_SPIKE_DETECTED', { ping_ms: smoothedLatency });
+             }
+             return smoothedLatency;
+          });
+          flushRetryQueue();
         } else {
           setEdgeHealth('OFFLINE');
         }
@@ -147,7 +155,7 @@ function App() {
     pingHealth();
     const interval = setInterval(pingHealth, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [trackEvent, flushRetryQueue]);
 
   // Eager connection check
   useEffect(() => {

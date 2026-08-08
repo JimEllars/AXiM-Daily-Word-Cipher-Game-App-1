@@ -14,7 +14,9 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/games/daily-word-cipher*"]
+    "run_worker_first": [
+      "/games/daily-word-cipher*"
+    ]
   },
   "d1_databases": [
     {
@@ -27,5 +29,11 @@
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "TELEMETRY_KV",
+      "id": "telemetry_kv_id_placeholder"
+    }
+  ]
 }

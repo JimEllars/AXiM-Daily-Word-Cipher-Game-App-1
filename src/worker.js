@@ -87,6 +87,32 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     return json({ status: "ok", edge: "cloudflare", timestamp: Date.now() }, { headers: { "Cache-Control": "no-cache" } });
   }
 
+  if (pathname === "/api/admin/metrics" && request.method === "GET") {
+    const date = new URL(request.url).searchParams.get("date");
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return json({ error: "Invalid date format." }, { status: 400 });
+    }
+    if (!env.TELEMETRY_KV) {
+      return json({ error: "KV not bound" }, { status: 500 });
+    }
+
+    try {
+      const prefix = `stats:${date}:`;
+      const list = await env.TELEMETRY_KV.list({ prefix });
+      const stats = {};
+      const promises = list.keys.map(async (k) => {
+        const val = await env.TELEMETRY_KV.get(k.name);
+        stats[k.name.replace(prefix, '')] = parseInt(val, 10) || 0;
+      });
+      await Promise.all(promises);
+
+      return json({ date, stats });
+    } catch (e) {
+      return json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+
 
   if (pathname === "/api/hint/today" && request.method === "GET") {
     const dayId = getDayId();
@@ -198,6 +224,30 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     }
 
     let metadata = metadataStr;
+
+    if (env.TELEMETRY_KV) {
+      ctx.waitUntil(
+        (async () => {
+          try {
+            const dateStr = new Date().toISOString().split('T')[0];
+            const totalKey = `stats:${dateStr}:total_events`;
+            const eventKey = `stats:${dateStr}:${event_name}`;
+
+            const [total, eventTotal] = await Promise.all([
+              env.TELEMETRY_KV.get(totalKey).then(v => parseInt(v) || 0),
+              env.TELEMETRY_KV.get(eventKey).then(v => parseInt(v) || 0)
+            ]);
+
+            await Promise.all([
+              env.TELEMETRY_KV.put(totalKey, (total + 1).toString()),
+              env.TELEMETRY_KV.put(eventKey, (eventTotal + 1).toString())
+            ]);
+          } catch (err) {
+            console.error("KV aggregation failed", err);
+          }
+        })()
+      );
+    }
 
     ctx.waitUntil(
       (async () => {

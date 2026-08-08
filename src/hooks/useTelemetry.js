@@ -32,13 +32,17 @@ export const useTelemetry = () => {
         });
 
         if (!res.ok) {
-          throw new Error('Network response was not ok');
+          if (res.status === 429 || res.status >= 500) {
+            throw new Error('Rate limit or Server error');
+          }
+          // Do not queue for 400 errors
+          return;
         }
       } catch (e) {
         // Fail silently so that network telemetry drops never disrupt gameplay
         console.warn(`[AXiM Telemetry] Dropped event: ${eventName}. Queuing for retry.`);
         try {
-          const queue = JSON.parse(localStorage.getItem('axim_telemetry_queue') || '[]');
+          const queue = JSON.parse(localStorage.getItem('axim_telemetry_retry_queue') || '[]');
           queue.push(eventPayload);
 
           if (eventName !== 'OFFLINE_SYNC_QUEUED') {
@@ -51,7 +55,11 @@ export const useTelemetry = () => {
             });
           }
 
-          localStorage.setItem('axim_telemetry_queue', JSON.stringify(queue));
+          while(queue.length > 50) {
+            queue.shift();
+          }
+
+          localStorage.setItem('axim_telemetry_retry_queue', JSON.stringify(queue));
         } catch (storageError) {
           console.warn('[AXiM Telemetry] Failed to queue event', storageError);
         }
@@ -59,9 +67,9 @@ export const useTelemetry = () => {
     })();
   }, []);
 
-  const processQueue = useCallback(async () => {
+  const flushRetryQueue = useCallback(async () => {
     try {
-      const queue = JSON.parse(localStorage.getItem('axim_telemetry_queue') || '[]');
+      const queue = JSON.parse(localStorage.getItem('axim_telemetry_retry_queue') || '[]');
       if (queue.length === 0) return;
 
       const failedQueue = [];
@@ -82,9 +90,9 @@ export const useTelemetry = () => {
       }
 
       if (failedQueue.length > 0) {
-        localStorage.setItem('axim_telemetry_queue', JSON.stringify(failedQueue));
+        localStorage.setItem('axim_telemetry_retry_queue', JSON.stringify(failedQueue));
       } else {
-        localStorage.removeItem('axim_telemetry_queue');
+        localStorage.removeItem('axim_telemetry_retry_queue');
         trackEvent('OFFLINE_SYNC_FLUSHED', { type: 'telemetry_sync', count: queue.length });
       }
     } catch (err) {
@@ -93,16 +101,16 @@ export const useTelemetry = () => {
   }, [trackEvent]);
 
   useEffect(() => {
-    const queue = JSON.parse(localStorage.getItem('axim_telemetry_queue') || '[]');
+    const queue = JSON.parse(localStorage.getItem('axim_telemetry_retry_queue') || '[]');
     if (navigator.onLine && queue.length > 0) {
-      processQueue();
+      flushRetryQueue();
     }
-  }, [processQueue]);
+  }, [flushRetryQueue]);
 
   useEffect(() => {
-    window.addEventListener('online', processQueue);
-    return () => window.removeEventListener('online', processQueue);
-  }, [processQueue]);
+    window.addEventListener('online', flushRetryQueue);
+    return () => window.removeEventListener('online', flushRetryQueue);
+  }, [flushRetryQueue]);
 
-  return { trackEvent };
+  return { trackEvent, flushRetryQueue };
 };
