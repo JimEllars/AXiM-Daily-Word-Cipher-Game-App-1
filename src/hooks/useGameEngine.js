@@ -48,6 +48,69 @@ const calculateScore = (attempts, isPracticeMode = false) => {
 
 export const useGameEngine = (walletAddress) => {
   const { trackEvent } = useTelemetry();
+  // Task 2: Proactive SSO Background Token Refresh
+  useEffect(() => {
+    let refreshTimeout;
+    const monitorToken = () => {
+      const token = localStorage.getItem('axim_sso_token');
+      if (!token) return;
+
+      try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return;
+        const payload = JSON.parse(atob(parts[1]));
+        if (!payload.exp) return;
+
+        const expirationTime = payload.exp * 1000;
+        const currentTime = Date.now();
+        const timeUntilRefresh = expirationTime - currentTime - (5 * 60 * 1000); // 5 minutes before expiration
+
+        if (timeUntilRefresh > 0) {
+          clearTimeout(refreshTimeout);
+          refreshTimeout = setTimeout(async () => {
+            try {
+              const res = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.token) {
+                  localStorage.setItem('axim_sso_token', data.token);
+                  monitorToken(); // Re-schedule next refresh
+                }
+              } else if (res.status === 401 || res.status === 403) {
+                 // Fail gracefully, don't wipe game state
+                 console.warn("Failed to refresh token (401/403). Session may expire soon.");
+              }
+            } catch (err) {
+              console.error("Error refreshing token:", err);
+            }
+          }, timeUntilRefresh);
+        }
+      } catch (err) {
+        console.error("Error decoding token for refresh:", err);
+      }
+    };
+
+    monitorToken();
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'axim_sso_token') {
+        clearTimeout(refreshTimeout);
+        monitorToken();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearTimeout(refreshTimeout);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
 
   // Task 2: Timer Purge (Deep Clean)
   useEffect(() => {
