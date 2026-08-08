@@ -87,6 +87,41 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     return json({ status: "ok", edge: "cloudflare", timestamp: Date.now() }, { headers: { "Cache-Control": "no-cache" } });
   }
 
+  if (pathname === "/api/admin/summary" && request.method === "GET") {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || authHeader !== `Bearer ${env.ADMIN_TOKEN}`) {
+      return json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+
+    // Default dates
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setUTCDate(today.getUTCDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+    const startDate = url.searchParams.get("startDate") || thirtyDaysAgoStr;
+    const endDate = url.searchParams.get("endDate") || todayStr;
+
+    try {
+      const { results } = await env.DB.prepare(
+        "SELECT * FROM DailyTelemetrySummaries WHERE date >= ? AND date <= ? ORDER BY date DESC"
+      ).bind(startDate, endDate).all();
+
+      return json({
+        status: "success",
+        range: { startDate, endDate },
+        summaries: results
+      });
+    } catch (err) {
+      console.error("[ADMIN SUMMARY ERROR]", err);
+      return json({ error: "Internal Server Error" }, { status: 500 });
+    }
+  }
+
   if (pathname === "/api/admin/metrics" && request.method === "GET") {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || authHeader !== `Bearer ${env.ADMIN_TOKEN}`) {
@@ -409,6 +444,19 @@ export default {
           console.log(`[CRON] Processed telemetry rollup for ${dateStr}`);
         } catch (e) {
           console.error("[CRON ERROR]", e);
+          try {
+            if (env.TELEMETRY_KV) {
+              const todayStr = new Date().toISOString().split('T')[0];
+              const deadLetterPayload = JSON.stringify({
+                error: e.message,
+                timestamp: Date.now(),
+                cron: event.cron
+              });
+              await env.TELEMETRY_KV.put(`alert:cron_failure:${todayStr}`, deadLetterPayload, { expirationTtl: 14 * 24 * 60 * 60 });
+            }
+          } catch (kvErr) {
+            console.error("[CRON ALERT ERROR] Failed to write dead-letter payload", kvErr);
+          }
         }
       })()
     );
