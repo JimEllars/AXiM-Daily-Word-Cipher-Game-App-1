@@ -106,16 +106,31 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
     const startDate = url.searchParams.get("startDate") || thirtyDaysAgoStr;
     const endDate = url.searchParams.get("endDate") || todayStr;
 
+    const cacheKey = new Request(url.toString(), request);
+    const cache = caches.default;
+    const cachedResponse = await cache.match(cacheKey);
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
     try {
       const { results } = await env.DB.prepare(
         "SELECT * FROM DailyTelemetrySummaries WHERE date >= ? AND date <= ? ORDER BY date DESC"
       ).bind(startDate, endDate).all();
 
-      return json({
+      const response = json({
         status: "success",
         range: { startDate, endDate },
         summaries: results
+      }, {
+        headers: {
+          "Cache-Control": "private, max-age=300"
+        }
       });
+
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      return response;
     } catch (err) {
       console.error("[ADMIN SUMMARY ERROR]", err);
       return json({ error: "Internal Server Error" }, { status: 500 });
