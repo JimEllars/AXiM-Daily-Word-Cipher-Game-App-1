@@ -1,15 +1,5 @@
-# Sprint #48: KV Telemetry Aggregation, Client Retry Queue, & Latency Smoothing
+## Patch Summary - Sprint #48
 
-## 1. Cloudflare KV Pre-Aggregated Metrics
-- Bound `TELEMETRY_KV` in `wrangler.jsonc` to store aggregated telemetry stats.
-- Updated `src/worker.js` `POST /api/telemetry` endpoint to safely write daily aggregated counter metrics (`total_events` & specific `event_name`) for zero-downtime metric collection.
-- Added a secure `GET /api/admin/metrics?date=YYYY-MM-DD` dashboard endpoint to easily query these counters directly from KV for ultra-fast load times.
-
-## 2. Telemetry Client-Side Retry Queue
-- Rebuilt network error handling within `src/hooks/useTelemetry.js` to catch 429/5xx status drops explicitly.
-- Established a `axim_telemetry_retry_queue` in `localStorage`, cleanly capping at max 50 events.
-- Exposed and integrated a robust `flushRetryQueue()` callback to silently replay deferred analytics payloads upon detecting reliable edge connectivity.
-
-## 3. Edge Latency Smoothing & Spike Telemetry
-- Converted standard `/api/health` network pings in `src/App.jsx` to an Exponential Moving Average (EMA) to prevent wild latency display fluctuations on the UI.
-- Deployed a threshold check that securely pushes a `LATENCY_SPIKE_DETECTED` event payload whenever a user experiences an individual network ping degradation surpassing 500ms, logging the unsmoothed latency metric.
+- **KV Telemetry Aggregation (`src/worker.js`, `wrangler.jsonc`)**: Aggregated daily telemetry event totals into Cloudflare KV in the `POST /api/telemetry` handler. Applied a 90-day TTL (7,776,000 seconds) to KV put operations to reduce D1 reads. The GET `/api/admin/metrics` endpoint was verified to serve pre-aggregated telemetry metrics securely with an API token.
+- **Client Retry Queue (`src/hooks/useTelemetry.js`)**: Ensured event retention up to 50 items locally via `localStorage` on fetch failure, restoring analytics continuity post-offline incidents. Handled queue sync retries in response to connectivity status and health checks.
+- **Latency Smoothing & Spike Telemetry (`src/App.jsx`, `src/hooks/useTelemetry.js`)**: Updated the health ping in `src/App.jsx` with an EMA (Exponential Moving Average) calculation for UI stability. Set triggers on high ping responses (>500ms) to emit a `LATENCY_SPIKE_DETECTED` event containing `{ ping_ms }`.
