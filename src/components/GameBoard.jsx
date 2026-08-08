@@ -164,8 +164,12 @@ const GameBoard = ({ guesses, currentGuess, targetWord, onForfeit, gameOver, sta
     return 'absent';
   };
 
-  return (
+    return (
     <div className="flex flex-col items-center h-full justify-center min-h-0 w-full">
+      <div aria-live="polite" className="sr-only">
+        {guesses.length > 0 ? `Guess ${guesses.length} submitted.` : 'Game started.'}
+        {gameOver && (hasWon ? ' You won!' : ' Game over.')}
+      </div>
       <div ref={boardRef} className={`grid gap-2 mb-4 overflow-y-auto [&::-webkit-scrollbar]:hidden ${isWiping ? 'animate-terminal-wipe' : ''}`} style={{ maxHeight: "100%", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {guesses.map((guess, rowIdx) => (
           <div key={`row-${rowIdx}`} className="flex gap-2">

@@ -145,6 +145,7 @@ export const useGameEngine = (walletAddress) => {
 
   const [unlockedBadges, setUnlockedBadges] = useState([]);
   const [streak, setStreak] = useState(0);
+  const [gamesWon, setGamesWon] = useState(0);
   const [hasMintedToday, setHasMintedToday] = useState(false);
   const [isWiping, setIsWiping] = useState(false);
   const [lifetimePracticeScore, setLifetimePracticeScore] = useState(() => {
@@ -376,6 +377,9 @@ export const useGameEngine = (walletAddress) => {
     const today = new Date().toDateString();
     
     setStreak(savedStreak ? parseInt(savedStreak) : 3);
+
+    const savedGamesWon = localStorage.getItem('axim_games_won');
+    setGamesWon(savedGamesWon ? parseInt(savedGamesWon) : 0);
   }, []);
 
 
@@ -457,6 +461,10 @@ export const useGameEngine = (walletAddress) => {
 
         const newStreak = streak + 1;
         setStreak(newStreak);
+
+        const newGamesWon = gamesWon + 1;
+        setGamesWon(newGamesWon);
+        localStorage.setItem('axim_games_won', newGamesWon);
         localStorage.setItem('axim_streak', newStreak);
         localStorage.setItem('axim_last_played', new Date().toDateString());
         currentEvaluatedStreak = newStreak;
@@ -587,6 +595,7 @@ export const useGameEngine = (walletAddress) => {
     setHasMintedToday,
     isPracticeMode,
     startPracticeGame,
+    gamesWon,
     lifetimePracticeScore,
     isWiping,
     skipPracticeWord,

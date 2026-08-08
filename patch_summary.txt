@@ -1,5 +1,16 @@
-## Patch Summary - Sprint #48
+Sprint #49: Cron Telemetry Rollups, Reactive Stats UI, & WCAG Accessibility
 
-- **KV Telemetry Aggregation (`src/worker.js`, `wrangler.jsonc`)**: Aggregated daily telemetry event totals into Cloudflare KV in the `POST /api/telemetry` handler. Applied a 90-day TTL (7,776,000 seconds) to KV put operations to reduce D1 reads. The GET `/api/admin/metrics` endpoint was verified to serve pre-aggregated telemetry metrics securely with an API token.
-- **Client Retry Queue (`src/hooks/useTelemetry.js`)**: Ensured event retention up to 50 items locally via `localStorage` on fetch failure, restoring analytics continuity post-offline incidents. Handled queue sync retries in response to connectivity status and health checks.
-- **Latency Smoothing & Spike Telemetry (`src/App.jsx`, `src/hooks/useTelemetry.js`)**: Updated the health ping in `src/App.jsx` with an EMA (Exponential Moving Average) calculation for UI stability. Set triggers on high ping responses (>500ms) to emit a `LATENCY_SPIKE_DETECTED` event containing `{ ping_ms }`.
+1. Cloudflare Cron Trigger Nightly Metrics Rollup:
+   - Updated `wrangler.jsonc` to include `triggers = { crons = ["0 0 * * *"] }`.
+   - Updated `src/worker.js` with `scheduled(event, env, ctx)` handler to execute at midnight UTC.
+   - The handler aggregates KV metrics and inserts a summary row into D1 `DailyTelemetrySummaries`.
+
+2. Instant Stats Panel UI Reactivity:
+   - Added `gamesWon` state to `src/hooks/useGameEngine.js` and ensured it persists in localStorage.
+   - Updated `src/App.jsx` to pass `gamesWon` down to the StatsPanel.
+   - Updated `src/components/StatsPanel.jsx` to wrap stats in `motion.span` elements with a `key` property to trigger animated pulsing on increment.
+
+3. Retro Terminal ARIA & Keyboard Accessibility:
+   - Added `aria-label` logic for keys in `src/components/Keyboard.jsx`.
+   - Added an `aria-live="polite"` element for visual-only screen reader updates in `src/components/GameBoard.jsx`.
+   - Updated `src/index.css` to add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400` styling.
