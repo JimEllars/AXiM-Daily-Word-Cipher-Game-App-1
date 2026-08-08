@@ -75,6 +75,47 @@ function App() {
   const [showStats, setShowStats] = useState(false);
   const [edgeHealth, setEdgeHealth] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [updateWaiting, setUpdateWaiting] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState(null);
+
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (!reg) return;
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                setUpdateWaiting(true);
+                setWaitingWorker(newWorker);
+              }
+            });
+          }
+        });
+
+        if (reg.waiting) {
+          setUpdateWaiting(true);
+          setWaitingWorker(reg.waiting);
+        }
+      });
+    }
+  }, []);
+
+  const handleRebootTerminal = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      waitingWorker.addEventListener('statechange', () => {
+        if (waitingWorker.state === 'activated') {
+          window.location.reload();
+        }
+      });
+      // Fallback reload just in case
+      setTimeout(() => window.location.reload(), 1000);
+    }
+  };
 
   useEffect(() => {
     let timeoutId;
@@ -83,12 +124,23 @@ function App() {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => setToastMessage(null), 3000);
     };
+
+    const handleRpcFallback = (e) => {
+      setToastMessage('[ NETWORK: RPC FALLBACK ACTIVE ]');
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setToastMessage(null), 3000);
+
+      trackEvent('RPC_FALLBACK_TRIGGERED', e.detail);
+    };
+
     window.addEventListener('axim_toast', handleToast);
+    window.addEventListener('axim_rpc_fallback', handleRpcFallback);
     return () => {
       window.removeEventListener('axim_toast', handleToast);
+      window.removeEventListener('axim_rpc_fallback', handleRpcFallback);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, []);
+  }, [trackEvent]);
   
   // const targetWord = getDailyWord(); // Moved to useGameEngine
   const dict = i18n[language];
@@ -248,6 +300,22 @@ function App() {
   const appContent = (
     <>
 
+
+      <AnimatePresence>
+        {updateWaiting && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-0 left-0 w-full z-[200] px-4 py-3 bg-blue-600/90 text-white font-mono font-bold border-b-2 border-blue-400 shadow-[0_4px_10px_rgba(37,99,235,0.5)] flex flex-col sm:flex-row justify-center items-center gap-4"
+          >
+            <span>[ SYSTEM UPDATE AVAILABLE ]</span>
+            <button onClick={handleRebootTerminal} className="px-3 py-1 bg-black/50 border border-blue-300 hover:bg-blue-800 transition-colors">
+              [ REBOOT TERMINAL ]
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {toastMessage && (
           <motion.div

@@ -24,9 +24,14 @@ export const getProvider = async (ethereumProvider) => {
       ]);
       return browserProvider;
     } catch (error) {
+
       console.warn('[TELEMETRY] Primary Web3 provider failed or timed out. Falling back to secondary RPC.', error);
+      window.dispatchEvent(new CustomEvent('axim_rpc_fallback', {
+        detail: { primary_rpc: primaryRpc, fallback_rpc: fallbackRpc, timestamp: Date.now() }
+      }));
       // Fallback if browser provider fails (e.g. wrong network or rpc issue)
       return new ethers.JsonRpcProvider(fallbackRpc);
+
     }
   }
 
@@ -39,7 +44,12 @@ export const getProvider = async (ethereumProvider) => {
     ]);
     return jsonProvider;
   } catch (error) {
+
     console.warn('[TELEMETRY] Primary RPC failed or timed out. Falling back to secondary RPC.', error);
+    window.dispatchEvent(new CustomEvent('axim_rpc_fallback', {
+      detail: { primary_rpc: primaryRpc, fallback_rpc: fallbackRpc, timestamp: Date.now() }
+    }));
     return new ethers.JsonRpcProvider(fallbackRpc);
+
   }
 };
