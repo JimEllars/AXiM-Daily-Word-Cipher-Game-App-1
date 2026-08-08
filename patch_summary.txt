@@ -1,16 +1,4 @@
-Sprint #50: Cron Alerting, SSO Token Proactive Refresh, & Admin Telemetry API
-
-1. Cron Dead-Letter Logging & Alerting:
-   - Wrapped `src/worker.js` `scheduled` handler in a `try/catch` block.
-   - Built a dead-letter payload upon failure to record `{ error, timestamp, cron }`.
-   - Logged failures to `TELEMETRY_KV` under the `alert:cron_failure:YYYY-MM-DD` key with a 14-day expiration TTL.
-
-2. Proactive SSO Background Token Refresh:
-   - Added `useEffect` in `src/hooks/useGameEngine.js` to continuously monitor `axim_sso_token` for expiration.
-   - Triggers a POST to `/api/auth/refresh` 5 minutes prior to token expiration to automatically replace with new token in localStorage.
-   - Added graceful handling (401/403) to prevent unexpected puzzle session loss.
-
-3. Historical Admin Telemetry Summary API:
-   - Built a `GET /api/admin/summary` route in `src/worker.js`.
-   - Added requirement for `Authorization: Bearer <ADMIN_KEY>`.
-   - Implemented `startDate` and `endDate` query parameters for fetching `DailyTelemetrySummaries` records gracefully.
+Sprint #51 Deliverables Completed:
+1. Admin Telemetry Edge Caching (src/worker.js): Added caches.default to GET /api/admin/summary to cache queries for 300 seconds and prevent D1 read exhaustion.
+2. Adaptive Health Ping Backoff & Network Recovery (src/App.jsx): Added failure tracking for the 60-second /api/health check. Three failures trigger a 120-second backoff and 'DEGRADED' UI state.
+3. Multi-Tab Game State Synchronization (src/hooks/useGameEngine.js): Expanded 'storage' listener to rehydrate 'axim_daily_state' or 'axim_practice_score' keys alongside the existing keys without reloading the page.

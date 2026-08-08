@@ -130,12 +130,24 @@ function App() {
 
   // Edge health ping
   useEffect(() => {
+    let intervalId;
+    let failCount = 0;
+    let currentInterval = 60000;
+
     const pingHealth = async () => {
       try {
         const start = Date.now();
         const res = await fetch(`${import.meta.env.BASE_URL}api/health`);
-        if (res.ok) {
-          const currentLatency = Date.now() - start;
+        const currentLatency = Date.now() - start;
+
+        if (res.ok && currentLatency <= 1000) {
+          failCount = 0;
+          if (currentInterval !== 60000) {
+            currentInterval = 60000;
+            clearInterval(intervalId);
+            intervalId = setInterval(pingHealth, currentInterval);
+          }
+
           if (currentLatency > 500) {
             trackEvent('LATENCY_SPIKE_DETECTED', { ping_ms: currentLatency });
           }
@@ -146,16 +158,30 @@ function App() {
           });
           flushRetryQueue();
         } else {
-          setEdgeHealth('OFFLINE');
+          handlePingFailure();
         }
       } catch (e) {
+        handlePingFailure();
+      }
+    };
+
+    const handlePingFailure = () => {
+      failCount++;
+      if (failCount >= 3) {
+        setEdgeHealth('DEGRADED');
+        if (currentInterval !== 120000) {
+          currentInterval = 120000;
+          clearInterval(intervalId);
+          intervalId = setInterval(pingHealth, currentInterval);
+        }
+      } else {
         setEdgeHealth('OFFLINE');
       }
     };
 
     pingHealth();
-    const interval = setInterval(pingHealth, 60000);
-    return () => clearInterval(interval);
+    intervalId = setInterval(pingHealth, currentInterval);
+    return () => clearInterval(intervalId);
   }, [trackEvent, flushRetryQueue]);
 
   // Eager connection check

@@ -225,7 +225,7 @@ export const useGameEngine = (walletAddress) => {
   // Cross-tab synchronization
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'axim_current_session') {
+      if (e.key === 'axim_daily_state' || e.key === 'axim_current_session') {
         if (!e.newValue && !isPracticeMode) {
           // If session was flushed
           setGuesses([]);
@@ -246,6 +246,10 @@ export const useGameEngine = (walletAddress) => {
           } catch (err) {
             console.error('Failed to sync session from storage event', err);
           }
+        }
+      } else if (e.key === 'axim_practice_score' || e.key === 'axim_lifetime_practice_score') {
+        if (e.newValue) {
+          setLifetimePracticeScore(parseInt(e.newValue, 10));
         }
       } else if (e.key === 'axim_last_minted_day_id') {
         const todayId = Math.floor(Date.now() / 86400000).toString();
