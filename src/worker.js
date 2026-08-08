@@ -88,6 +88,10 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
   }
 
   if (pathname === "/api/admin/metrics" && request.method === "GET") {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || authHeader !== `Bearer ${env.ADMIN_TOKEN}`) {
+      return json({ error: "Unauthorized" }, { status: 401 });
+    }
     const date = new URL(request.url).searchParams.get("date");
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return json({ error: "Invalid date format." }, { status: 400 });
@@ -239,8 +243,8 @@ const handleApiRequest = async (request, env, ctx, pathname) => {
             ]);
 
             await Promise.all([
-              env.TELEMETRY_KV.put(totalKey, (total + 1).toString()),
-              env.TELEMETRY_KV.put(eventKey, (eventTotal + 1).toString())
+              env.TELEMETRY_KV.put(totalKey, (total + 1).toString(), { expirationTtl: 7776000 }),
+              env.TELEMETRY_KV.put(eventKey, (eventTotal + 1).toString(), { expirationTtl: 7776000 })
             ]);
           } catch (err) {
             console.error("KV aggregation failed", err);
