@@ -134,13 +134,13 @@ function App() {
         const start = Date.now();
         const res = await fetch(`${import.meta.env.BASE_URL}api/health`);
         if (res.ok) {
-          const ms = Date.now() - start;
+          const currentLatency = Date.now() - start;
+          if (currentLatency > 500) {
+            trackEvent('LATENCY_SPIKE_DETECTED', { ping_ms: currentLatency });
+          }
           setEdgeHealth((prev) => {
-             const previous = typeof prev === 'number' ? prev : ms;
-             const smoothedLatency = Math.round((ms * 0.3) + (previous * 0.7));
-             if (smoothedLatency > 500) {
-                 trackEvent('LATENCY_SPIKE_DETECTED', { ping_ms: smoothedLatency });
-             }
+             const previous = typeof prev === 'number' ? prev : currentLatency;
+             const smoothedLatency = Math.round((currentLatency * 0.3) + (previous * 0.7));
              return smoothedLatency;
           });
           flushRetryQueue();

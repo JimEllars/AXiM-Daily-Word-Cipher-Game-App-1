@@ -12,4 +12,4 @@
 
 ## 3. Edge Latency Smoothing & Spike Telemetry
 - Converted standard `/api/health` network pings in `src/App.jsx` to an Exponential Moving Average (EMA) to prevent wild latency display fluctuations on the UI.
-- Deployed a threshold check that securely pushes a `LATENCY_SPIKE_DETECTED` event payload whenever a user experiences network degradation surpassing 500ms.
+- Deployed a threshold check that securely pushes a `LATENCY_SPIKE_DETECTED` event payload whenever a user experiences an individual network ping degradation surpassing 500ms, logging the unsmoothed latency metric.
