@@ -46,3 +46,8 @@ body {
   background: #00ff66;
   border-radius: 4px;
 }
+@layer base {
+  *:focus-visible {
+    @apply outline-none ring-2 ring-green-400;
+  }
+}

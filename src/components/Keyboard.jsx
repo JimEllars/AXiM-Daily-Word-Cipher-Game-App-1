@@ -15,6 +15,19 @@ const Keyboard = ({ usedLetters, guesses, targetWord, onKeyPress }) => {
     return usedLetters[key] || 'unused';
   };
 
+
+  const getAriaLabel = (key, status) => {
+    if (key === 'ENTER') return 'Enter';
+    if (key === 'BACKSPACE') return 'Backspace';
+
+    switch (status) {
+      case 'correct': return `${key} - Correct position`;
+      case 'present': return `${key} - Present in word`;
+      case 'absent': return `${key} - Not in word`;
+      default: return `${key}`;
+    }
+  };
+
   const getKeyColor = (status) => {
     switch (status) {
       case 'correct': return 'bg-neon-green/20 border-neon-green text-neon-green shadow-[0_0_10px_rgba(0,255,102,0.3)]';
@@ -38,6 +51,7 @@ const Keyboard = ({ usedLetters, guesses, targetWord, onKeyPress }) => {
 
             return (
               <motion.button
+                aria-label={getAriaLabel(key, status)}
                 key={key}
                 whileTap={{ scale: 0.9 }}
                 onPointerDown={(e) => { e.preventDefault(); playClick(); onKeyPress(key); }}

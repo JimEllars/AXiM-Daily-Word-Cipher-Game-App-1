@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const StatsPanel = ({ score, streak, lifetimePracticeScore, dictionary }) => {
+const StatsPanel = ({ score, streak, lifetimePracticeScore, gamesWon, dictionary }) => {
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -11,16 +11,50 @@ const StatsPanel = ({ score, streak, lifetimePracticeScore, dictionary }) => {
       <div className="flex justify-around w-full">
         <div className="flex flex-col items-center">
           <span className="text-gray-400 text-xs mb-1 uppercase">Score</span>
-          <span className="font-bold text-white">{score}</span>
+          <motion.span
+            key={score}
+            initial={{ scale: 1.5, color: '#fff' }}
+            animate={{ scale: 1, color: '#fff' }}
+            className="font-bold text-white"
+          >
+            {score}
+          </motion.span>
         </div>
         <div className="flex flex-col items-center">
           <span className="text-gray-400 text-xs mb-1 uppercase">Daily Streak</span>
-          <span className="font-bold text-neon-pink">{streak} 🔥</span>
+          <motion.span
+            key={streak}
+            initial={{ scale: 1.5, color: '#ff007f' }}
+            animate={{ scale: 1, color: '#ff007f' }}
+            className="font-bold text-neon-pink"
+          >
+            {streak} 🔥
+          </motion.span>
         </div>
         {lifetimePracticeScore !== undefined && (
           <div className="flex flex-col items-center">
-            <span className="text-gray-400 text-xs mb-1 uppercase">Lifetime Practice Score</span>
-            <span className="font-bold text-neon-blue">{lifetimePracticeScore}</span>
+            <span className="text-gray-400 text-xs mb-1 uppercase">Practice Score</span>
+            <motion.span
+              key={lifetimePracticeScore}
+              initial={{ scale: 1.5, color: '#00f3ff' }}
+              animate={{ scale: 1, color: '#00f3ff' }}
+              className="font-bold text-neon-blue"
+            >
+              {lifetimePracticeScore}
+            </motion.span>
+          </div>
+        )}
+        {gamesWon !== undefined && (
+          <div className="flex flex-col items-center">
+            <span className="text-gray-400 text-xs mb-1 uppercase">Games Won</span>
+            <motion.span
+              key={gamesWon}
+              initial={{ scale: 1.5, color: '#00ff66' }}
+              animate={{ scale: 1, color: '#00ff66' }}
+              className="font-bold text-neon-green"
+            >
+              {gamesWon}
+            </motion.span>
           </div>
         )}
       </div>

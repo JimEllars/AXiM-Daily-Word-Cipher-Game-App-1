@@ -110,6 +110,7 @@ function App() {
     setHasMintedToday,
     isPracticeMode,
     startPracticeGame,
+    gamesWon,
     lifetimePracticeScore,
     isWiping,
     skipPracticeWord,
@@ -283,6 +284,7 @@ function App() {
           score={score}
           streak={streak}
           lifetimePracticeScore={lifetimePracticeScore}
+          gamesWon={gamesWon}
           dictionary={dict}
         />
 

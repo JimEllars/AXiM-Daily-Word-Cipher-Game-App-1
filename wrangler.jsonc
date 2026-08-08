@@ -35,5 +35,8 @@
       "binding": "TELEMETRY_KV",
       "id": "telemetry_kv_id_placeholder"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": ["0 0 * * *"]
+  }
 }
