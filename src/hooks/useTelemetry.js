@@ -28,6 +28,7 @@ export const useTelemetry = () => {
           headers: {
             'Content-Type': 'application/json',
           },
+          keepalive: true,
           body: JSON.stringify(eventPayload),
         });
 
