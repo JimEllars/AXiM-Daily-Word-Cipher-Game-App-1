@@ -1,4 +1,9 @@
-Sprint #52 Deliverables Completed:
-1. Cloudflare D1 Query Execution Telemetry (src/worker.js): Wrapped D1 SQL calls inside `POST /api/user/sync` and `GET /api/admin/summary` with `performance.now()` timers. Slow queries (>100ms) construct `D1_QUERY_SLOW` events and are written asynchronously to `TELEMETRY_KV`.
-2. Web3 RPC Fallback Telemetry & Client Toast (src/config/web3.js, src/App.jsx): Dispatched `axim_rpc_fallback` in `web3.js` on fallback. Added listener in `App.jsx` to render auto-dismissing `[ NETWORK: RPC FALLBACK ACTIVE ]` toast and send `RPC_FALLBACK_TRIGGERED` telemetry event.
-3. PWA Service Worker Update Prompt (public/sw.js, src/App.jsx): Added `SKIP_WAITING` handler in `sw.js`. Listened for `updatefound` and `statechange` in `App.jsx` to render a sticky `[ SYSTEM UPDATE AVAILABLE ]` notification with `[ REBOOT TERMINAL ]` reload action.
+Sprint #53 - Top-Left Clickable Brand Logo, New Tab Isolation, Navigation Telemetry, & Responsive Header Balancing
+
+Modifications:
+- src/hooks/useTelemetry.js: Added `keepalive: true` to the fetch request in `trackEvent` to ensure telemetry reliably fires when a user clicks the logo to open a new tab/window without being dropped due to page unloads or quick navigations.
+- src/components/Header.jsx:
+  - Restructured the flexbox layout to support wrapping on mobile screens (<380px) and display the `edgeHealth` (passed via props) in the center.
+  - Replaced the logo with the updated AXiM Development brand logo and configured it as an anchor linking to the games portal (`target="_blank"`, `rel="noopener noreferrer"`).
+  - Wired `useTelemetry` to trigger `NAVIGATED_TO_AXIM_GAMES` immediately upon clicking the logo link.
+- src/App.jsx: Passed `edgeHealth` to the `<Header />` component and removed the duplicated/old edge health display at the bottom of the layout grid to consolidate header UI components.

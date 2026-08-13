@@ -350,6 +350,7 @@ function App() {
               setHasMintedToday(false);
             }
           }}
+          edgeHealth={edgeHealth}
         />
 
         <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-between mt-4 overflow-y-auto min-h-0">
@@ -473,11 +474,7 @@ function App() {
         />
 
         <div className="w-full flex justify-center mt-4 pb-4 items-center gap-4">
-          {edgeHealth !== null && (
-            <div className="font-mono text-[10px] text-green-400 opacity-70 border border-green-400/30 px-2 py-1 uppercase tracking-wider">
-              [ EDGE: {typeof edgeHealth === 'number' ? `${edgeHealth}ms` : edgeHealth} ]
-            </div>
-          )}
+
           <button
             onClick={() => setShowStats(!showStats)}
             className="px-4 py-2 border border-gray-600 text-gray-400 hover:text-white hover:border-white font-mono text-xs transition-colors bg-transparent uppercase"
