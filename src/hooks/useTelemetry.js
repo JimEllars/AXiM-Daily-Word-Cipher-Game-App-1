@@ -76,21 +76,55 @@ export const useTelemetry = () => {
       const failedQueue = [];
 
       for (const item of queue) {
-        try {
-          const res = await fetch(`${import.meta.env.BASE_URL}api/telemetry`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(item),
-          });
-          if (!res.ok) throw new Error('Failed to send');
-        } catch (e) {
-          failedQueue.push(item);
+        let success = false;
+        let attempt = 0;
+        let backoffDelay = 2000;
+
+        while (!success && attempt < 3) {
+          try {
+            if (attempt > 0) {
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              backoffDelay *= 2; // Progressive backoff: 2s -> 4s
+            }
+
+            if (!navigator.onLine) {
+              throw new Error('Offline');
+            }
+
+            const res = await fetch(`${import.meta.env.BASE_URL}api/telemetry`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(item),
+            });
+
+            if (!res.ok) {
+              if (res.status === 429 || res.status >= 500) {
+                attempt++;
+                if (attempt >= 3) {
+                  failedQueue.push(item);
+                  break;
+                }
+              } else {
+                // Client error (400, etc), don't retry
+                break;
+              }
+            } else {
+              success = true;
+            }
+          } catch (e) {
+            attempt++;
+            if (attempt >= 3 || !navigator.onLine) {
+              failedQueue.push(item);
+              break;
+            }
+          }
         }
       }
 
       if (failedQueue.length > 0) {
+        while (failedQueue.length > 50) failedQueue.shift();
         localStorage.setItem('axim_telemetry_retry_queue', JSON.stringify(failedQueue));
       } else {
         localStorage.removeItem('axim_telemetry_retry_queue');

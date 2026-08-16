@@ -6,7 +6,7 @@ const StatsPanel = ({ score, streak, lifetimePracticeScore, gamesWon, dictionary
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-surface-dark border-[3px] border-double border-neon-green p-4 w-full max-w-xl flex flex-col items-center justify-around mb-8 shadow-panel text-sm md:text-base text-shadow-neon"
+      className="bg-surface-dark/90 backdrop-blur-sm border-[3px] border-double border-neon-green/40 shadow-[0_0_15px_rgba(0,255,102,0.15)] p-4 w-full max-w-xl flex flex-col items-center justify-around mb-8 text-sm md:text-base text-shadow-neon"
     >
       <div className="flex justify-around w-full">
         <div className="flex flex-col items-center">
