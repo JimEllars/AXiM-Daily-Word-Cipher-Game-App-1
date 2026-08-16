@@ -9,7 +9,7 @@ const Instructions = ({ isOpen, onClose, dict }) => {
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-surface-dark border-2 border-neon-pink shadow-neon-pink p-8 max-w-lg w-full font-mono text-sm leading-relaxed"
+        className="bg-surface-dark/95 backdrop-blur-md border-[2px] border-neon-green/50 shadow-[0_0_20px_rgba(0,255,102,0.2)] p-8 max-w-lg w-full font-mono text-sm leading-relaxed"
       >
         <h2 className="text-white font-cyber text-lg mb-6 text-center text-shadow-neon-pink underline">{dict.instructions}</h2>
         
@@ -37,7 +37,7 @@ const Instructions = ({ isOpen, onClose, dict }) => {
 
         <button 
           onClick={onClose}
-          className="w-full mt-8 py-3 bg-neon-pink text-white font-bold shadow-neon-pink hover:brightness-110 transition-all uppercase"
+          className="w-full mt-8 py-3 bg-neon-pink text-white font-bold shadow-neon-pink hover:brightness-110 transition-all uppercase focus-visible:ring-2 focus-visible:ring-neon-green focus:outline-none"
         >
           Initialize Game
         </button>
