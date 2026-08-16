@@ -23,7 +23,7 @@ const BadgesPanel = ({ unlockedBadges, title }) => {
               className={`
                 px-3 py-2 text-xs border rounded-sm flex items-center gap-2 font-mono
                 ${isUnlocked 
-                  ? 'border-neon-pink text-neon-pink bg-neon-pink/10 shadow-neon-pink opacity-100' 
+                  ? 'border-neon-pink text-neon-pink bg-neon-pink/10 shadow-[0_0_10px_rgba(255,0,127,0.5)] opacity-100'
                   : 'border-gray-700 text-gray-500 opacity-40'}
               `}
             >

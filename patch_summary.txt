@@ -1,13 +1,18 @@
-Sprint #54 Updates:
-1. Automated Playwright E2E Header & Navigation Suite
-   - Created tests/header.spec.js to validate branding, outbound navigation, and network traffic (POST /api/telemetry).
-   - Validated responsive layouts for desktop (1280x800) and mobile (375x667).
+Sprint #55 Updates:
 
-2. Telemetry Retry Exponential Backoff
-   - Updated src/hooks/useTelemetry.js to implement progressive backoff delays (2s, 4s, 8s) for rate limit (429) or server (5xx) errors.
-   - Ensured the offline queue is strictly capped at 50 events in localStorage.
+1. Outbound Navigation Telemetry D1 Rollup (src/worker.js)
+   - Added `outbound_clicks` column to `DailyTelemetrySummaries` table.
+   - Aggregated `NAVIGATED_TO_AXIM_GAMES` metrics during the nightly summary cron.
+   - Updated GET `/api/admin/summary` to return `outbound_clicks` inherently via SELECT *.
 
-3. CRT Visual Polish for Stats & Guess Distribution
-   - Refined StatsPanel.jsx with glowing retro terminal styling (neon-green glowing borders).
-   - Polished GuessDistribution.jsx bar charts with smooth animated fill transitions, high-contrast monospace labels, and retro green fill bars.
-   - Verified that no timer or seconds elements were introduced.
+2. Automated Playwright E2E Gameplay Suite (tests/gameplay.spec.js)
+   - Created E2E test suite for evaluating valid 5-letter cipher guessing.
+   - Validated tile styling and on-screen keyboard updates based on guess evaluation.
+   - Asserted `aria-live="polite"` trigger updates for accessibility.
+   - Asserted that `localStorage` correctly hydrates the puzzle board state on reload without wiping guesses.
+
+3. CRT Styling Harmonization for Modals (src/components/Instructions.jsx, src/components/BadgesPanel.jsx)
+   - Polished `Instructions.jsx` to feature glowing double borders (`border-neon-green/50`), blur backdrop, and monospace layout.
+   - Updated modal close button to feature a highly-visible `focus-visible:ring-neon-green`.
+   - Polished `BadgesPanel.jsx` with monospace labels and glowing `shadow-neon-pink` accent blocks for unlocked milestones.
+   - Ensured zero addition of timers or clocks to comply with core design philosophies.

@@ -490,6 +490,7 @@ export default {
           let totalEvents = 0;
           let gamesStarted = 0;
           let gamesWon = 0;
+          let outboundClicks = 0;
 
           const promises = keys.keys.map(async (k) => {
             const val = await env.TELEMETRY_KV.get(k.name);
@@ -498,17 +499,18 @@ export default {
             if (metric === 'total_events') totalEvents += num;
             if (metric === 'GAME_STARTED') gamesStarted += num;
             if (metric === 'GAME_COMPLETED') gamesWon += num; // simplified based on GAME_COMPLETED mapping assuming a breakdown or we map it if necessary
+            if (metric === 'NAVIGATED_TO_AXIM_GAMES') outboundClicks += num;
           });
 
           await Promise.all(promises);
 
           await env.DB.prepare(
-            "CREATE TABLE IF NOT EXISTS DailyTelemetrySummaries (date TEXT PRIMARY KEY, total_events INTEGER, games_started INTEGER, games_won INTEGER, created_at INTEGER)"
+            "CREATE TABLE IF NOT EXISTS DailyTelemetrySummaries (date TEXT PRIMARY KEY, total_events INTEGER, games_started INTEGER, games_won INTEGER, outbound_clicks INTEGER DEFAULT 0, created_at INTEGER)"
           ).run();
 
           await env.DB.prepare(
-            "INSERT OR REPLACE INTO DailyTelemetrySummaries (date, total_events, games_started, games_won, created_at) VALUES (?, ?, ?, ?, ?)"
-          ).bind(dateStr, totalEvents, gamesStarted, gamesWon, Date.now()).run();
+            "INSERT OR REPLACE INTO DailyTelemetrySummaries (date, total_events, games_started, games_won, outbound_clicks, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+          ).bind(dateStr, totalEvents, gamesStarted, gamesWon, outboundClicks, Date.now()).run();
 
           console.log(`[CRON] Processed telemetry rollup for ${dateStr}`);
         } catch (e) {
